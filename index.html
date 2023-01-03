@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<title> | Juan Botes</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="author" content="Juan Botes">
+<meta name="generator" content="Jekyll v3.9.2">
+<link rel="canonical" href="https://botesjuan.github.io/">
+
+<link rel="stylesheet" href="/assets/css/frame.css">
+
+<!-- <link rel="alternate" href="/feed.xml" type="application/atom+xml" title="Juan Botes"> -->
+
+<header>
+  <a href="/" class="title">Juan Botes</a>
+  <nav>
+  <a href="https://app.hackthebox.com/profile/226855">HackTheBox Profile of SkippyPeanut</a>
+  <a href="https://tryhackme.com/p/SkippyPeanut">TryHackMe Profile of SkippyPeanut</a>
+  <a href="https://twitter.com/juanbotes">Twitter SkippyPeanut</a>
+  <a href="https://www.linkedin.com/in/juan-botes-85565817/">Linkedin Profile for Juan Botes</a>
+  <a href="https://github.com/botesjuan">GitHub BotesJuan</a>
+  </nav>
+</header>
+
+
+<article>
+    <header>
+	<h1>CSP Evaluator - Google</a></h1>
+	</header>
+
+    CSP Evaluator allows developers and security analysts to check if a Content Security Policy (CSP) serves vulnerabilites that can lead to cross-site scripting XSS.
+    <div class="more"><a href="https://csp-evaluator.withgoogle.com/">CSP Evaluator Online</a></div>
+  </article>
+
+
+
+
+
+
+
+
+<footer>
+  <div>Unplug if you want complete security.</div>
+  <nav><a href="mailto:botes.juan@gmail.com" ><svg aria-label="Mail" class="icon"><use xlink:href="/assets/fontawesome/icons.svg#envelope"></use></svg></a><a href="https://github.com/botesjuan" ><svg aria-label="Github" class="icon"><use xlink:href="/assets/fontawesome/icons.svg#github"></use></svg></a><a href="https://www.linkedin.com/in/juan-botes-85565817/" ><svg aria-label="LinkedIn" class="icon"><use xlink:href="/assets/fontawesome/icons.svg#linkedin"></use></svg></a></nav>
+
+</footer>
+
+
+<script>
+//open external links in a new window
+function external_new_window() {
+    for(var c = document.getElementsByTagName("a"), a = 0;a < c.length;a++) {
+        var b = c[a];
+        if(b.getAttribute("href") && b.hostname !== location.hostname) {
+            b.target = "_blank";
+            b.rel = "noopener";
+        }
+    }
+}
+//open PDF links in a new window
+function pdf_new_window ()
+{
+    if (!document.getElementsByTagName) return false;
+    var links = document.getElementsByTagName("a");
+    for (var eleLink=0; eleLink < links.length; eleLink ++) {
+    if ((links[eleLink].href.indexOf('.pdf') !== -1)||(links[eleLink].href.indexOf('.doc') !== -1)||(links[eleLink].href.indexOf('.docx') !== -1)) {
+        links[eleLink].onclick =
+        function() {
+            window.open(this.href);
+            return false;
+        }
+    }
+    }
+} 
+pdf_new_window();
+external_new_window();
+</script>
+
+</body>
+</html>
