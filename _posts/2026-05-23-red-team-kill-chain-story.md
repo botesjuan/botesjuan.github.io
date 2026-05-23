@@ -17,9 +17,9 @@ Every engagement starts with a single question, *if someone wanted to reach the 
 
 The answer begins long before anyone touches a keyboard.
 
-The target organisation ran three separate Windows domains, each sitting behind on seperated networks. Locked rooms linked by secure corridors. The outermost domain, call it the **child domain**, was where employees worked day to day. Beyond child domain lived the **parent domain**, home to the corporate headquarters and its domain controllers. And buried at the very end, invisible to the rest of the network and reachable only through layers of authentication and trust, was the **secure vault**, a hardened vault holding the organisation's crown jewels.
+The target organisation ran three separate Windows domains, each sitting behind seperated networks. Locked rooms linked by secure corridors. The outermost domain, call it the **child domain**, was where employees worked day to day. Beyond child domain lived the **parent domain**, home to the corporate headquarters and its domain controllers. And buried at the very end, invisible to the rest of the network and reachable only through layers of authentication and trust, was the **secure vault**, a hardened vault holding the organisation's crown jewels.
 
-The rules were clear. A full security monitoring stack was watching, Elastic EDR recording every process, Sysmon logging every pipe and thread, Windows Defender scanning every file. Getting caught would cost points. Getting caught on the wrong machine would end the engagement immediately.
+The rules were clear. A full security monitoring stack was watching, Elastic EDR recording every process, Sysmon event logging every pipe and thread, Windows Defender scanning every file. Getting caught would cost points. Getting caught on the wrong machine would end the engagement immediately.
 
 The objective, obtain a single low <span class="cyan">privilege</span> user account named **Angela**, and use it, through whatever gaps existed in the architecture, to reach a locked file server in the secure storage vault and prove access by writing a "flag" file to its hard drive. Proving the possibility of ransomware deployment.
 
