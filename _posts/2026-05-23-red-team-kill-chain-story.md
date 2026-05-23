@@ -5,15 +5,8 @@
   .prp { color: #7b2fff; font-weight: bold; }   /* tool names */
 </style>
 
----
-layout: post
-title: "<span class="red">red team</span> Operator: A Kill Chain Story"
-date: 2026-05-23
-categories: [<span class="red">red team</span>, Kill Chain]
-tags: [red-team, cobalt-strike, active-directory]
----
 
-# <span class="red">red team</span> Operator, a Kill Chain Story
+# <span class="red">Red Team</span> Operator, a Kill Chain Story
 
 **Operator,** Juan Botes | 22 May 2026
 
