@@ -1,0 +1,141 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+/* ── FUTURISTIC DARK THEME ── */
+
+:root {
+  --bg:        #0a0e17;
+  --surface:   #0f1623;
+  --border:    #1e3a5f;
+  --accent:    #00d4ff;
+  --accent2:   #7b2fff;
+  --text:      #c8d8e8;
+  --muted:     #5a7a9a;
+  --heading:   #e0f0ff;
+  --code-bg:   #0d1f33;
+  --glow:      0 0 12px rgba(0, 212, 255, 0.4);
+}
+
+/* Base */
+body {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace !important;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+/* Header / Nav */
+.site-header {
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: 0 2px 20px rgba(0, 212, 255, 0.15) !important;
+}
+
+.site-title, .site-title:visited {
+  color: var(--accent) !important;
+  font-weight: 700 !important;
+  letter-spacing: 2px !important;
+  text-shadow: var(--glow) !important;
+  text-transform: uppercase;
+}
+
+.site-nav .page-link {
+  color: var(--text) !important;
+  letter-spacing: 1px;
+}
+
+.site-nav .page-link:hover {
+  color: var(--accent) !important;
+  text-shadow: var(--glow);
+}
+
+/* Main content wrapper */
+.wrapper {
+  max-width: 860px !important;
+}
+
+/* Post titles */
+h1, h2, h3, h4 {
+  color: var(--heading) !important;
+  letter-spacing: 1px;
+}
+
+h1 { border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+
+a {
+  color: var(--accent) !important;
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent2) !important;
+  text-shadow: 0 0 8px rgba(123, 47, 255, 0.5);
+}
+
+/* Post list on homepage */
+.post-list h3 a {
+  color: var(--accent) !important;
+  font-size: 1.1em;
+}
+
+.post-meta {
+  color: var(--muted) !important;
+  font-size: 0.82em;
+}
+
+/* Code blocks */
+pre, code {
+  background: var(--code-bg) !important;
+  color: #64ffda !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px;
+}
+
+pre {
+  padding: 16px !important;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+  overflow-x: auto;
+}
+
+code { padding: 2px 6px; font-size: 0.88em; }
+
+/* Blockquotes — styled as terminal output */
+blockquote {
+  border-left: 3px solid var(--accent) !important;
+  background: var(--code-bg) !important;
+  color: var(--accent) !important;
+  padding: 12px 20px !important;
+  margin: 20px 0 !important;
+  font-style: normal !important;
+  box-shadow: var(--glow);
+}
+
+/* Footer */
+.site-footer {
+  background: var(--surface) !important;
+  border-top: 1px solid var(--border) !important;
+  color: var(--muted) !important;
+}
+
+/* Horizontal rules */
+hr {
+  border-color: var(--border) !important;
+}
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; }
+th {
+  background: var(--surface);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+}
+td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  color: var(--text);
+}
+tr:nth-child(even) td { background: rgba(0,212,255,0.03); }
