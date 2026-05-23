@@ -1,14 +1,5 @@
-title: "Juan Botes"
-tagline: "Red Team Operator | Penetration Tester"
-description: "Kill chain stories, red team tradecraft, and offensive security notes."
+title: "Juan Botes | Red Team Operator"
+description: "Kill chain stories, red team tradecraft, and offensive security study notes."
 author: "Juan Botes"
-
-theme: minima
-minima:
-  skin: dark
-
 show_excerpts: true
 permalink: /:title/
-
-header_pages:
-  - index.md
