@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Juan Botes | Red Team Operator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#050a12;color:#a0c4d8;font-family:'Share Tech Mono',monospace;font-size:15px;line-height:1.9;min-height:100vh;}
+
+    /* Animated grid background */
+    body::before{
+      content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+      background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),
+                       linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);
+      background-size:50px 50px;
+      animation:gridMove 20s linear infinite;
+      pointer-events:none;z-index:0;
+    }
+    @keyframes gridMove{0%{background-position:0 0}100%{background-position:50px 50px}}
+
+    /* Scanlines */
+    body::after{
+      content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+      background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.05) 3px,rgba(0,0,0,0.05) 4px);
+      pointer-events:none;z-index:1;
+    }
+
+    header{
+      position:sticky;top:0;z-index:100;
+      border-bottom:1px solid #0d3a5c;
+      padding:16px 40px;
+      display:flex;align-items:center;justify-content:space-between;
+      background:rgba(5,10,18,0.97);
+      backdrop-filter:blur(10px);
+    }
+    .logo{font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:#00d4ff;letter-spacing:3px;text-decoration:none;text-transform:uppercase;}
+    .logo span{color:#7b2fff;}
+    nav a{color:#5a8faa;font-size:11px;letter-spacing:2px;text-decoration:none;margin-left:24px;text-transform:uppercase;transition:color 0.2s;}
+    nav a:hover{color:#00d4ff;}
+    nav a.gh{border:1px solid #0d3a5c;padding:5px 12px;color:#00d4ff;}
+    nav a.gh:hover{background:#0d3a5c;}
+
+    /* Hero section */
+    .hero{
+      position:relative;z-index:2;
+      padding:60px 40px 40px;
+      border-bottom:1px solid #0d3a5c;
+      display:grid;grid-template-columns:1fr 380px;gap:40px;align-items:center;
+      max-width:1100px;margin:0 auto;
+    }
+    .hero-tag{font-size:10px;color:#7b2fff;letter-spacing:4px;text-transform:uppercase;margin-bottom:16px;}
+    .hero h1{font-family:'Orbitron',monospace;font-size:30px;font-weight:700;color:#e0f4ff;line-height:1.3;margin-bottom:20px;}
+    .hero h1 em{color:#00d4ff;font-style:normal;}
+    .hero-sub{color:#5a8faa;font-size:13px;line-height:1.9;margin-bottom:28px;}
+    .hero-btns{display:flex;gap:12px;flex-wrap:wrap;}
+    .btn{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;text-decoration:none;padding:10px 20px;border:1px solid;cursor:pointer;}
+    .btn-primary{color:#050a12;background:#00d4ff;border-color:#00d4ff;}
+    .btn-primary:hover{background:#7b2fff;border-color:#7b2fff;}
+    .btn-outline{color:#00d4ff;background:transparent;border-color:#0d3a5c;}
+    .btn-outline:hover{border-color:#00d4ff;}
+
+    /* SVG Hero Graphic */
+    .hero-visual{position:relative;}
+    .hero-visual svg{width:100%;height:auto;}
+
+    /* Stats bar */
+    .stats{
+      position:relative;z-index:2;
+      display:flex;gap:0;border-bottom:1px solid #0d3a5c;
+      background:rgba(0,0,0,0.3);
+      max-width:1100px;margin:0 auto;
+    }
+    .stat{flex:1;padding:16px 24px;border-right:1px solid #0d3a5c;text-align:center;}
+    .stat:last-child{border-right:none;}
+    .stat-n{font-family:'Orbitron',monospace;font-size:22px;color:#00d4ff;font-weight:700;}
+    .stat-l{font-size:10px;color:#5a8faa;letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+
+    /* Main layout */
+    .container{max-width:1100px;margin:0 auto;padding:40px;position:relative;z-index:2;display:grid;grid-template-columns:1fr 280px;gap:40px;}
+
+    /* Posts */
+    .section-label{font-size:10px;color:#00d4ff;letter-spacing:4px;text-transform:uppercase;margin-bottom:24px;display:flex;align-items:center;gap:16px;}
+    .section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,#0d3a5c,transparent);}
+    .post-card{border:1px solid #0d3a5c;border-left:3px solid #00d4ff;padding:24px;margin-bottom:20px;background:rgba(0,20,40,0.5);transition:all 0.25s;position:relative;overflow:hidden;}
+    .post-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:1px;background:linear-gradient(90deg,#00d4ff,transparent);opacity:0;transition:opacity 0.3s;}
+    .post-card:hover{border-left-color:#7b2fff;background:rgba(0,30,60,0.7);transform:translateX(4px);}
+    .post-card:hover::before{opacity:1;}
+    .post-date{font-size:10px;color:#7b2fff;letter-spacing:3px;margin-bottom:10px;text-transform:uppercase;}
+    .post-title{font-family:'Orbitron',monospace;font-size:14px;color:#e0f4ff;margin-bottom:12px;line-height:1.5;}
+    .post-title a{color:inherit;text-decoration:none;}
+    .post-title a:hover{color:#00d4ff;}
+    .post-excerpt{font-size:12px;color:#5a8faa;line-height:1.9;}
+    .tag{display:inline-block;font-size:10px;padding:3px 10px;border:1px solid #0d3a5c;color:#00d4ff;margin:8px 4px 0 0;letter-spacing:1px;}
+
+    /* Sidebar */
+    .sidebar{}
+    .sidebar-block{margin-bottom:32px;}
+    .sidebar-title{font-size:10px;color:#00d4ff;letter-spacing:3px;text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #0d3a5c;}
+    .cert-row{display:flex;justify-content:space-between;font-size:12px;color:#5a8faa;padding:6px 0;border-bottom:1px solid rgba(13,58,92,0.4);}
+    .cert-row span{color:#00ff88;font-size:11px;}
+    .cert-row .wip{color:#7b2fff;}
+
+    /* Terminal widget */
+    .terminal{background:#020810;border:1px solid #0d3a5c;padding:16px;font-size:12px;line-height:2.2;}
+    .t-bar{display:flex;gap:6px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #0d3a5c;}
+    .t-dot{width:10px;height:10px;border-radius:50%;}
+    .t-red{background:#ff5f57;} .t-yellow{background:#febc2e;} .t-green{background:#28c840;}
+    .t-line{color:#a0c4d8;}
+    .t-prompt{color:#7b2fff;}
+    .t-out{color:#00ff88;}
+    .t-cursor{display:inline-block;width:8px;height:14px;background:#00d4ff;animation:blink 1s step-end infinite;vertical-align:-2px;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+    /* Threat level widget */
+    .threat-bar{margin-bottom:8px;}
+    .threat-label{display:flex;justify-content:space-between;font-size:11px;color:#5a8faa;margin-bottom:4px;}
+    .threat-label span{color:#a0c4d8;}
+    .bar-track{height:4px;background:#0d3a5c;border-radius:2px;}
+    .bar-fill{height:4px;border-radius:2px;}
+    .fill-cyan{background:#00d4ff;} .fill-purple{background:#7b2fff;} .fill-green{background:#00ff88;}
+
+    footer{
+      position:relative;z-index:2;
+      border-top:1px solid #0d3a5c;padding:24px 40px;
+      font-size:11px;color:#2a4a5a;
+      display:flex;justify-content:space-between;align-items:center;
+      letter-spacing:2px;
+    }
+    footer a{color:#0d3a5c;text-decoration:none;}
+    footer a:hover{color:#00d4ff;}
+
+    @media(max-width:768px){
+      .hero{grid-template-columns:1fr;}.hero-visual{display:none;}
+      .container{grid-template-columns:1fr;}
+      .stats{flex-wrap:wrap;}
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">Juan<span>.</span>Botes</a>
+  <nav>
+    <a href="#posts">Posts</a>
+    <a href="#about">About</a>
+    <a class="gh" href="https://github.com/botesjuan/botesjuan.github.io" target="_blank">⌥ GitHub</a>
+  </nav>
+</header>
+
+<div class="hero">
+  <div class="hero-left">
+    <div class="hero-tag">// Senior Penetration Tester · Integrity360 · Cape Town, ZA</div>
+    <h1>Kill Chain Stories &<br><em>Offensive Security</em><br>Field Notes</h1>
+    <p class="hero-sub">Red team tradecraft, adversary simulation, and active directory exploitation — written from the attacker's perspective. OSCP · CISSP · BSCP · CEH · CRTO↗</p>
+    <div class="hero-btns">
+      <a class="btn btn-primary" href="#posts">Read Posts</a>
+      <a class="btn btn-outline" href="https://github.com/botesjuan" target="_blank">GitHub Profile</a>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <!-- Cyber AI SVG Graphic -->
+    <svg viewBox="0 0 380 300" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <radialGradient id="coreGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#7b2fff" stop-opacity="0.8"/>
+          <stop offset="100%" stop-color="#00d4ff" stop-opacity="0.1"/>
+        </radialGradient>
+      </defs>
+      <!-- Outer hex ring -->
+      <polygon points="190,20 310,85 310,215 190,280 70,215 70,85" fill="none" stroke="#0d3a5c" stroke-width="1"/>
+      <polygon points="190,35 295,93 295,207 190,265 85,207 85,93" fill="none" stroke="#00d4ff" stroke-width="0.5" opacity="0.4"/>
+      <!-- Rotating ring segments -->
+      <circle cx="190" cy="150" r="90" fill="none" stroke="#00d4ff" stroke-width="0.5" stroke-dasharray="12,8" opacity="0.5">
+        <animateTransform attributeName="transform" type="rotate" from="0 190 150" to="360 190 150" dur="20s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="190" cy="150" r="70" fill="none" stroke="#7b2fff" stroke-width="0.5" stroke-dasharray="6,14" opacity="0.6">
+        <animateTransform attributeName="transform" type="rotate" from="360 190 150" to="0 190 150" dur="15s" repeatCount="indefinite"/>
+      </circle>
+      <!-- Core glow -->
+      <circle cx="190" cy="150" r="45" fill="url(#coreGrad)" opacity="0.7"/>
+      <circle cx="190" cy="150" r="30" fill="#050a12" stroke="#00d4ff" stroke-width="1.5" filter="url(#glow)"/>
+      <!-- AI brain lines -->
+      <line x1="190" y1="120" x2="190" y2="180" stroke="#00d4ff" stroke-width="1" opacity="0.8"/>
+      <line x1="165" y1="135" x2="215" y2="165" stroke="#00d4ff" stroke-width="1" opacity="0.8"/>
+      <line x1="215" y1="135" x2="165" y2="165" stroke="#00d4ff" stroke-width="1" opacity="0.8"/>
+      <circle cx="190" cy="150" r="5" fill="#00d4ff" filter="url(#glow)">
+        <animate attributeName="r" values="4;7;4" dur="2s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <!-- Node points on hex -->
+      <circle cx="190" cy="20" r="3" fill="#00d4ff" filter="url(#glow)"/>
+      <circle cx="310" cy="85" r="3" fill="#7b2fff" filter="url(#glow)"/>
+      <circle cx="310" cy="215" r="3" fill="#00d4ff" filter="url(#glow)"/>
+      <circle cx="190" cy="280" r="3" fill="#7b2fff" filter="url(#glow)"/>
+      <circle cx="70" cy="215" r="3" fill="#00d4ff" filter="url(#glow)"/>
+      <circle cx="70" cy="85" r="3" fill="#7b2fff" filter="url(#glow)"/>
+      <!-- Connection lines to center -->
+      <line x1="190" y1="20" x2="190" y2="120" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+      <line x1="310" y1="85" x2="220" y2="135" stroke="#7b2fff" stroke-width="0.5" opacity="0.3"/>
+      <line x1="70" y1="85" x2="160" y2="135" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+      <line x1="310" y1="215" x2="220" y2="165" stroke="#7b2fff" stroke-width="0.5" opacity="0.3"/>
+      <line x1="70" y1="215" x2="160" y2="165" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+      <line x1="190" y1="280" x2="190" y2="180" stroke="#7b2fff" stroke-width="0.5" opacity="0.3"/>
+      <!-- Labels -->
+      <text x="190" y="10" fill="#5a8faa" font-size="8" font-family="monospace" text-anchor="middle">RECON</text>
+      <text x="330" y="90" fill="#5a8faa" font-size="8" font-family="monospace">EXPLOIT</text>
+      <text x="320" y="225" fill="#5a8faa" font-size="8" font-family="monospace">LATERAL</text>
+      <text x="175" y="298" fill="#5a8faa" font-size="8" font-family="monospace" text-anchor="middle">EXFIL</text>
+      <text x="10" y="225" fill="#5a8faa" font-size="8" font-family="monospace">PERSIST</text>
+      <text x="18" y="90" fill="#5a8faa" font-size="8" font-family="monospace">C2</text>
+      <!-- Center label -->
+      <text x="190" y="154" fill="#00d4ff" font-size="7" font-family="monospace" text-anchor="middle" font-weight="bold">AI·RED·TEAM</text>
+      <!-- Floating data points -->
+      <circle cx="140" cy="80" r="2" fill="#00ff88" opacity="0.7">
+        <animate attributeName="opacity" values="0.7;0.1;0.7" dur="3s" begin="0s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="250" cy="95" r="2" fill="#00d4ff" opacity="0.7">
+        <animate attributeName="opacity" values="0.7;0.1;0.7" dur="2.5s" begin="0.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="270" cy="190" r="2" fill="#7b2fff" opacity="0.7">
+        <animate attributeName="opacity" values="0.7;0.1;0.7" dur="4s" begin="1s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="120" cy="200" r="2" fill="#00ff88" opacity="0.7">
+        <animate attributeName="opacity" values="0.7;0.1;0.7" dur="3.5s" begin="1.5s" repeatCount="indefinite"/>
+      </circle>
+    </svg>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-n">01</div><div class="stat-l">Published Posts</div></div>
+  <div class="stat"><div class="stat-n">5</div><div class="stat-l">Certifications</div></div>
+  <div class="stat"><div class="stat-n">AD</div><div class="stat-l">Specialisation</div></div>
+  <div class="stat"><div class="stat-n">ZA</div><div class="stat-l">Cape Town</div></div>
+  <div class="stat"><div class="stat-n">∞</div><div class="stat-l">Kill Chains</div></div>
+</div>
+
+<div class="container">
+  <div class="posts" id="posts">
+    <div class="section-label">Latest Posts</div>
+    <div class="post-card">
+      <div class="post-date">2026-05-23 · Red Team · Kill Chain</div>
+      <div class="post-title"><a href="/red-team-kill-chain-story/">Red Team Operator: A Kill Chain Story</a></div>
+      <div class="post-excerpt">A full narrative walkthrough of an adversary simulation engagement — from initial recon through domain compromise, lateral movement, and objective completion.</div>
+      <div>
+        <span class="tag">active-directory</span>
+        <span class="tag">cobalt-strike</span>
+        <span class="tag">red-team</span>
+        <span class="tag">kill-chain</span>
+      </div>
+    </div>
+    <!-- Add new post cards here as you write more -->
+  </div>
+
+  <div class="sidebar" id="about">
+    <div class="sidebar-block">
+      <div class="sidebar-title">Certifications</div>
+      <div class="cert-row">OSCP <span>✓ Active</span></div>
+      <div class="cert-row">CISSP <span>✓ Active</span></div>
+      <div class="cert-row">BSCP <span>✓ Active</span></div>
+      <div class="cert-row">CEH <span>✓ Active</span></div>
+      <div class="cert-row">CRTO <span class="wip">↗ In Progress</span></div>
+      <div class="cert-row">OSEP <span class="wip">→ Planned</span></div>
+    </div>
+
+    <div class="sidebar-block">
+      <div class="sidebar-title">Terminal</div>
+      <div class="terminal">
+        <div class="t-bar">
+          <div class="t-dot t-red"></div>
+          <div class="t-dot t-yellow"></div>
+          <div class="t-dot t-green"></div>
+        </div>
+        <div class="t-line"><span class="t-prompt">$ </span>whoami</div>
+        <div class="t-line t-out">juan_botes</div>
+        <div class="t-line"><span class="t-prompt">$ </span>cat role.txt</div>
+        <div class="t-line t-out">Senior Pen Tester</div>
+        <div class="t-line"><span class="t-prompt">$ </span>cat company.txt</div>
+        <div class="t-line t-out">Integrity360</div>
+        <div class="t-line"><span class="t-prompt">$ </span><div class="t-cursor"></div></div>
+      </div>
+    </div>
+
+    <div class="sidebar-block">
+      <div class="sidebar-title">Skill Matrix</div>
+      <div class="threat-bar">
+        <div class="threat-label">Active Directory <span>95%</span></div>
+        <div class="bar-track"><div class="bar-fill fill-cyan" style="width:95%"></div></div>
+      </div>
+      <div class="threat-bar">
+        <div class="threat-label">C2 Frameworks <span>88%</span></div>
+        <div class="bar-track"><div class="bar-fill fill-purple" style="width:88%"></div></div>
+      </div>
+      <div class="threat-bar">
+        <div class="threat-label">Web App Testing <span>85%</span></div>
+        <div class="bar-track"><div class="bar-fill fill-cyan" style="width:85%"></div></div>
+      </div>
+      <div class="threat-bar">
+        <div class="threat-label">Red Team Ops <span>90%</span></div>
+        <div class="bar-track"><div class="bar-fill fill-green" style="width:90%"></div></div>
+      </div>
+      <div class="threat-bar">
+        <div class="threat-label">AI / LLM Security <span>75%</span></div>
+        <div class="bar-track"><div class="bar-fill fill-purple" style="width:75%"></div></div>
+      </div>
+    </div>
+
+    <div class="sidebar-block">
+      <div class="sidebar-title">Links</div>
+      <div class="cert-row"><a href="https://github.com/botesjuan/botesjuan.github.io" target="_blank" style="color:#00d4ff;text-decoration:none;">⌥ Blog Source (GitHub)</a></div>
+      <div class="cert-row"><a href="https://github.com/botesjuan" target="_blank" style="color:#00d4ff;text-decoration:none;">⌥ GitHub Profile</a></div>
+      <div class="cert-row"><a href="https://www.youtube.com/@InfoSecAnimalSquad" target="_blank" style="color:#7b2fff;text-decoration:none;">▶ InfoSec Animal Squad</a></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>// BOTESJUAN.GITHUB.IO · INTEGRITY360 · CAPE TOWN · ZA</span>
+  <a href="https://github.com/botesjuan/botesjuan.github.io" target="_blank">View Source on GitHub</a>
+</footer>
+
+</body>
+</html>
