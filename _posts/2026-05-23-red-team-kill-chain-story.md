@@ -3,6 +3,7 @@
   .red { color: #ff4444; font-weight: bold; }   /* danger/alert terms */
   .grn { color: #00ff88; font-weight: bold; }   /* success/owned terms */
   .prp { color: #7b2fff; font-weight: bold; }   /* tool names */
+  .cyan { color: #00d4ff; font-weight: bold; }
 </style>
 
 
@@ -20,7 +21,7 @@ The target organisation ran three separate Windows domains, each sitting behind 
 
 The rules were clear. A full security monitoring stack was watching, Elastic EDR recording every process, Sysmon logging every pipe and thread, Windows Defender scanning every file. Getting caught would cost points. Getting caught on the wrong machine would end the engagement immediately.
 
-The objective, obtain a single low privilege user account named **Angela**, and use it, through whatever gaps existed in the architecture, to reach a locked file server in the secure storage vault and prove access by writing a "flag" file to its hard drive. Proving the possibility of ransomware deployment.
+The objective, obtain a single low <span class="cyan">privilege</span> user account named **Angela**, and use it, through whatever gaps existed in the architecture, to reach a locked file server in the secure storage vault and prove access by writing a "flag" file to its hard drive. Proving the possibility of ransomware deployment.
 
 The command and control (<span class="kw">C2</span>) communication path did not yet exist. The <span class="kw">C2</span> chain of malware beacons would have to be built, hop by hop, identity by identity, to reach the crown jewels.
 
@@ -44,7 +45,7 @@ The toolkit was ready. The operator turned their attention to the target.
 
 ## Chapter 3, Getting Through the Front Door
 
-**Angela** was a domain user, ordinary, unremarkable, with no special privileges beyond local <span class="grn">Administrator</span> rights on a her single Windows workstation. That was the assumed breach, the organisation had handed over her credentials as the starting point, representing the realistic scenario of a social engineering, phishing email or stolen password.
+**Angela** was a domain user, ordinary, unremarkable, with no special <span class="cyan">privileges</span> beyond local <span class="grn">Administrator</span> rights on a her single Windows workstation. That was the assumed breach, the organisation had handed over her credentials as the starting point, representing the realistic scenario of a social engineering, phishing email or stolen password.
 
 The workstation had AppLocker enabled, a Windows application allow listing policy that prevented arbitrary programs from running. Only files in certain trusted folders and signed by approved publishers were permitted to execute. Defender's real time protection was active and watching.
 
@@ -54,11 +55,11 @@ A single PowerShell command, perfectly legal in Windows, downloaded the custom b
 
 The beacon malware connected home to the public <span class="kw">C2</span> framework team server.
 
-Within moments, a blinking indicator appeared on the operator's <span class="prp">Cobalt Strike</span> console, a new session, running with full SYSTEM privileges inside the process on Angela's workstation. The first foothold was established. The door was open.
+Within moments, a blinking indicator appeared on the operator's <span class="prp">Cobalt Strike</span> console, a new session, running with full SYSTEM <span class="cyan">privileges</span> inside the process on Angela's workstation. The first foothold was established. The door was open.
 
 ## Chapter 4, Borrowing a Face
 
-**SYSTEM** privilege is very powerful, but it is also conspicuous in certain ways. More importantly, Angela's workstation was just the first room. The operator needed to move deeper, and that required the right identity for the next door.
+**SYSTEM** <span class="cyan">privilege</span> is very powerful, but it is also conspicuous in certain ways. More importantly, Angela's workstation was just the first room. The operator needed to move deeper, and that required the right identity for the next door.
 
 A review of the running processes on the machine revealed something useful, another user had an active session on the same workstation. Her name was **Brooks**, a member of the local workstation <span class="grn">Administrator</span> group on the next machine along the chain. She was logged in, her session was live, and her Windows security token, the digital credential that Windows checks whenever she opens a file or accesses a network share, was sitting inside one of her running processes.
 
@@ -114,7 +115,7 @@ The domain controller obliged. The <span class="prp">ticket</span> was cryptogra
 
 ## Chapter 9, The Database Admin's Gift
 
-Armed with a valid Kerberos authentication <span class="prp">ticket</span> in David's name, the <span class="red">red team</span> operator connected to the Database server with high database privileges. No username and password prompt. No VPN. Just a <span class="prp">ticket</span> that said "I am David, and I have permission to be here."
+Armed with a valid Kerberos authentication <span class="prp">ticket</span> in David's name, the <span class="red">red team</span> operator connected to the Database server with high database <span class="cyan">privileges</span>. No username and password prompt. No VPN. Just a <span class="prp">ticket</span> that said "I am David, and I have permission to be here."
 
 Microsoft Database Server includes a feature called Common Language Runtime (CLR) integration, the ability for a database <span class="grn">Administrator</span> to load compiled .NET code directly into the Database Server process and execute it as a stored procedure. It exists for legitimate data processing tasks. The operator had prepared a custom .NET library during the arming up phase way back in the beginning before engaging.
 
@@ -126,15 +127,15 @@ The database server was now under control by the <span class="red">red team</spa
 
 ## Chapter 10, From Guest to Owner
 
-The beacon running inside the Database Server process held the identity of the service account that ran Database Server, call it `TypicalDBServiceAccount`. This account had no special domain privileges, but it held one dangerous local Windows right, `SeImpersonatePrivilege`.
+The beacon running inside the Database Server process held the identity of the service account that ran Database Server, call it `TypicalDBServiceAccount`. This account had no special domain <span class="cyan">privileges</span>, but it held one dangerous local Windows right, `SeImpersonatePrivilege`.
 
-This privilege, the right to impersonate any user who connects to the process, is a standard part of how Database Server and certain other Windows services operate. In the hands of an operator who knows what to do with it, it is a reliable escalation path.
+This <span class="cyan">privilege</span>, the right to impersonate any user who connects to the process, is a standard part of how Database Server and certain other Windows services operate. In the hands of an operator who knows what to do with it, it is a reliable escalation path.
 
-The technique is called a potato attack, and the mechanics of it read like a confidence trick played on the operating system itself. A fake COM server was constructed on a local port. The exploit then tricked Windows, through a well understood coercion mechanism, into connecting to that fake server using SYSTEM level credentials. When database server connected, the account `TypicalDBServiceAccount` exercised its impersonation privilege and absorbed the SYSTEM identity from that connection.
+The technique is called a potato attack, and the mechanics of it read like a confidence trick played on the operating system itself. A fake COM server was constructed on a local port. The exploit then tricked Windows, through a well understood coercion mechanism, into connecting to that fake server using SYSTEM level credentials. When database server connected, the account `TypicalDBServiceAccount` exercised its impersonation <span class="cyan">privilege</span> and absorbed the SYSTEM identity from that connection.
 
 A TCP payload had been staged in advance and was listening on that local port, waiting for the SYSTEM connection to arrive.
 
-Internal to the database server the connection arrived. The <span class="kw">C2</span> beacon connected. A new session appeared in the operator's console, this one marked with the lightning bolt that indicated SYSTEM privileges on the database server.
+Internal to the database server the connection arrived. The <span class="kw">C2</span> beacon connected. A new session appeared in the operator's console, this one marked with the lightning bolt that indicated SYSTEM <span class="cyan">privileges</span> on the database server.
 
 The Database Server box was now fully owned, and accepting commands from the <span class="red">red team</span> operator. 
 
@@ -164,7 +165,7 @@ In a Microsoft Active Directory forest, child domains trust their parents. Child
 
 What it also means is that if you control the child, you can reach the parent, even ransom blackmail them if your intend.
 
-Fransisca's domain <span class="grn">Administrator</span> privileges on the Child Domain Controller gave the operator something extraordinarily valuable, the ability to ask the domain controller to share its most sensitive secret. Every single Kerberos <span class="prp">ticket</span> issued in the child domain, every login, every file access, every authentication, was ultimately signed with a cryptographic key belonging to one special account called the `MasterGrantingKeyAccount`. 
+Fransisca's domain <span class="grn">Administrator</span> <span class="cyan">privileges</span> on the Child Domain Controller gave the operator something extraordinarily valuable, the ability to ask the domain controller to share its most sensitive secret. Every single Kerberos <span class="prp">ticket</span> issued in the child domain, every login, every file access, every authentication, was ultimately signed with a cryptographic key belonging to one special account called the `MasterGrantingKeyAccount`. 
 Whoever held that key could forge any <span class="prp">ticket</span> they wanted. The operator performed a routine-looking domain synchronisation request, the same replication process that domain controllers use every day to stay in sync with each other. The child domain controller handed over the key without complaint. The monitoring system logged an Event 4662, replication activity on a domain controller, but nothing out of the ordinary. Perhaps the blue team night shift glanced at it and assumed Fransisca was running her regular administrative tasks.
 
 With the master key in hand, the operator sat quietly at the attacker's desktop and crafted what is known as a Golden <span class="prp">ticket</span>. This was a Kerberos authentication credential signed with the child domain's own genuine key, one that the operator wrote themselves. It declared the bearer to be the child domain's <span class="grn">Administrator</span>, but it contained one extra ingredient hidden inside, the group identifier of the **Special Admins** group from the parent domain.
@@ -264,7 +265,7 @@ Here is remedial suggestion to the blue team to improve there detection and resp
 
 - **Review RBCD attribute write permissions.** The final lock fell because any authenticated user in the secure vault could write the sensitive attribute on computer objects. This is almost never intentional. Audit who has write access to that attribute across your domain, and restrict it to domain <span class="grn">Administrator</span>s only.
 
-- **Strip SeImpersonatePrivilege from service accounts that do not need it.** The database service account escalated to SYSTEM because it held this privilege. Database Server needs to run as a low-privilege account or a Group Managed Service Account (gMSA) without this right wherever possible. Regularly audit which non-OS accounts hold this privilege.
+- **Strip SeImpersonatePrivilege from service accounts that do not need it.** The database service account escalated to SYSTEM because it held this <span class="cyan">privilege</span>. Database Server needs to run as a low-<span class="cyan">privilege</span> account or a Group Managed Service Account (gMSA) without this right wherever possible. Regularly audit which non-OS accounts hold this <span class="cyan">privilege</span>.
 
 - **Monitor WMI event subscription creation.** The operator's persistent DNS beacon on the parent domain controller survived because it was triggered by a WMI event subscription, which looks like routine system automation. New WMI subscriptions should be rare and reviewed. Windows Event 5861 and Sysmon Event 19, 20, and 21 capture this activity. Alert on any new subscription that was not created through your known change management process.
 
