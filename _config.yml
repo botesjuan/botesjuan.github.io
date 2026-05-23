@@ -1,0 +1,8 @@
+title: "Juan Botes | Red Team Operator"
+description: "Penetration Testing Stories, Red Team Tradecraft & InfoSec Notes"
+author: "Juan Botes"
+theme: minima
+
+# Optional nice extras
+show_excerpts: true
+permalink: /:title/
