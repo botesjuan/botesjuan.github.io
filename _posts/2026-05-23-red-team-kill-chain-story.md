@@ -7,7 +7,7 @@
 </style>
 
 
-# <span class="red">Red Team</span> Operator, a Kill Chain Story
+# <span class="red">Red Team</span> Operator, a Kill <span class="kw">chain</span> Story
 
 **Operator,** Juan Botes | 22 May 2026
 
@@ -23,7 +23,7 @@ The rules were clear. A full security monitoring stack was watching, Elastic EDR
 
 The objective, obtain a single low <span class="cyan">privilege</span> user account named **Angela**, and use it, through whatever gaps existed in the architecture, to reach a locked file server in the secure storage vault and prove access by writing a "flag" file to its hard drive. Proving the possibility of ransomware deployment.
 
-The command and control (<span class="kw">C2</span>) communication path did not yet exist. The <span class="kw">C2</span> chain of malware beacons would have to be built, hop by hop, identity by identity, to reach the crown jewels.
+The command and control (<span class="kw">C2</span>) communication path did not yet exist. The <span class="kw">C2</span> <span class="kw">chain</span> of malware beacons would have to be built, hop by hop, identity by identity, to reach the crown jewels.
 
 ## Chapter 2, Arming Up
 
@@ -61,7 +61,7 @@ Within moments, a blinking indicator appeared on the operator's <span class="prp
 
 **SYSTEM** <span class="cyan">privilege</span> is very powerful, but it is also conspicuous in certain ways. More importantly, Angela's workstation was just the first room. The operator needed to move deeper, and that required the right identity for the next door.
 
-A review of the running processes on the machine revealed something useful, another user had an active session on the same workstation. Her name was **Brooks**, a member of the local workstation <span class="grn">Administrator</span> group on the next machine along the chain. She was logged in, her session was live, and her Windows security token, the digital credential that Windows checks whenever she opens a file or accesses a network share, was sitting inside one of her running processes.
+A review of the running processes on the machine revealed something useful, another user had an active session on the same workstation. Her name was **Brooks**, a member of the local workstation <span class="grn">Administrator</span> group on the next machine along the <span class="kw">chain</span>. She was logged in, her session was live, and her Windows security token, the digital credential that Windows checks whenever she opens a file or accesses a network share, was sitting inside one of her running processes.
 
 SYSTEM level processes are permitted to reach into other processes and borrow their tokens. This is not an exploit; it is a documented Windows capability used legitimately by certain system services. The operator used it to extract Brooks' token from her active session and assume her identity inside the beacon.
 
@@ -177,9 +177,9 @@ The operator stepped into the parent domain's headquarters with unrestricted acc
 
 ## Chapter 14, The Lifeline
 
-Every experienced operator knows that a beacon chain is only as strong as its weakest link. The current chain stretched from the attacker's machine, through the Intranet server, through the database server, through the child Domain controller, and now into the parent Domain Controller. Five hops and easy to break with too many dependence and chance that a blue team threat hunting will disrupt the chained communication back out the building. Any single failure, a rebooted machine, a changed service configuration, a network hiccup, and the entire <span class="kw">C2</span> chain would collapse resulting in loss of access for the <span class="red">red team</span> operator.
+Every experienced operator knows that a beacon <span class="kw">chain</span> is only as strong as its weakest link. The current <span class="kw">chain</span> stretched from the attacker's machine, through the Intranet server, through the database server, through the child Domain controller, and now into the parent Domain Controller. Five hops and easy to break with too many dependence and chance that a blue team threat hunting will disrupt the chained communication back out the building. Any single failure, a rebooted machine, a changed service configuration, a network hiccup, and the entire <span class="kw">C2</span> <span class="kw">chain</span> would collapse resulting in loss of access for the <span class="red">red team</span> operator.
 
-The vault was coming next, and the vault was the most sensitive part of the engagement. If the <span class="kw">C2</span> beacon chain failed there, there would be nothing to fall back on.
+The vault was coming next, and the vault was the most sensitive part of the engagement. If the <span class="kw">C2</span> beacon <span class="kw">chain</span> failed there, there would be nothing to fall back on.
 
 The operator planted a backup before going further and ensuring persistence to come back and continue in dark of another night while not being disturbed and the blue team night shift doing graveyard duty.
 
@@ -187,7 +187,7 @@ A DNS beacon, a variant of the implant that communicates entirely through DNS qu
 
 A Windows Management Instrument (WMI) event subscription was configured, a legitimate Windows automation feature, to execute <span class="kw">C2</span> beacon binary whenever the machine's Group Policy refreshed. Group Policy refresh is a routine Operating System event that happens automatically every ninety minutes on every domain controller in an organisation. The operator waited patiently for the refresh to trigger the first callback.
 
-A second, completely independent SYSTEM beacon appeared on the parent Domain Controller, communicating purely through DNS queries, with no named pipe and no dependency on the SMB chain that preceded it. If everything else failed, this beacon would remain persistent, keeping the controller room backdoor open to return.
+A second, completely independent SYSTEM beacon appeared on the parent Domain Controller, communicating purely through DNS queries, with no named pipe and no dependency on the SMB <span class="kw">chain</span> that preceded it. If everything else failed, this beacon would remain persistent, keeping the controller room backdoor open to return.
 
 The safety net was in place. The operator turned toward the secure storage vault.
 
@@ -201,9 +201,9 @@ The same replication technique that had unlocked the child domain now unlocked t
 
 Now, with the parent domain's master key in hand, the operator crafted a second Golden <span class="prp">ticket</span>. This one declared the bearer to be the parent domain's own <span class="grn">Administrator</span>, and buried inside it was the group identifier of the vault Access group. The <span class="prp">ticket</span> never touched any target machine. It was built entirely on the attacker's desktop, signed with a stolen key, and ready to be presented at borders that did not expect forgery.
 
-The forged passport went first to the parent domain controller. The controller inspected the cryptographic signature, found it mathematically valid, saw the vault Access group membership, and issued a referral <span class="prp">ticket</span> for the vault's domain, just as it would for any legitimate member of that group. The vault's own domain controller then received that referral and issued the final service <span class="prp">tickets</span>, one permitting file-system access to the jump host, one permitting service delivery. Both <span class="prp">tickets</span> were genuine, issued by real infrastructure, because the chain of signatures leading back to them was unbroken. The forgery was at the very beginning, invisible from where the vault's controller was standing.
+The forged passport went first to the parent domain controller. The controller inspected the cryptographic signature, found it mathematically valid, saw the vault Access group membership, and issued a referral <span class="prp">ticket</span> for the vault's domain, just as it would for any legitimate member of that group. The vault's own domain controller then received that referral and issued the final service <span class="prp">tickets</span>, one permitting file-system access to the jump host, one permitting service delivery. Both <span class="prp">tickets</span> were genuine, issued by real infrastructure, because the <span class="kw">chain</span> of signatures leading back to them was unbroken. The forgery was at the very beginning, invisible from where the vault's controller was standing.
 
-With the file-access <span class="prp">ticket</span> confirming reach to the jump host, the service <span class="prp">ticket</span> was used to land a new beacon there, quietly and without fanfare, through the same service-modification technique that had moved the operator through every machine before it. This new session linked back not through the long SMB chain of compromised machines but directly through the resilient DNS beacon sitting on the parent domain controller, independent and persistent regardless of what happened to anything else.
+With the file-access <span class="prp">ticket</span> confirming reach to the jump host, the service <span class="prp">ticket</span> was used to land a new beacon there, quietly and without fanfare, through the same service-modification technique that had moved the operator through every machine before it. This new session linked back not through the long SMB <span class="kw">chain</span> of compromised machines but directly through the resilient DNS beacon sitting on the parent domain controller, independent and persistent regardless of what happened to anything else.
 
 The operator had entered the secure storage vault.
 
@@ -253,7 +253,7 @@ The entire path, from Angela's ordinary workstation to the crown jewel secure fi
 
 ## Lessons to be learned for the Blue Team SOC Defenders
 
-The entire attack chain described in this story exploited no zero-day vulnerabilities. Every technique abused legitimate Windows features, trusted system paths, and built-in authentication mechanisms. Only a single initial password for the compromised account on the foothold was known. That is the uncomfortable truth defenders must sit with, the tools to compromise a domain are often already inside the domain, waiting to be picked up.
+The entire attack <span class="kw">chain</span> described in this story exploited no zero-day vulnerabilities. Every technique abused legitimate Windows features, trusted system paths, and built-in authentication mechanisms. Only a single initial password for the compromised account on the foothold was known. That is the uncomfortable truth defenders must sit with, the tools to compromise a domain are often already inside the domain, waiting to be picked up.
 
 Here is remedial suggestion to the blue team to improve there detection and response procedures based on this story.
 
