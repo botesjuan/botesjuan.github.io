@@ -9,7 +9,7 @@
 
 # <span class="red">Red Team</span> Operator, a Kill <span class="kw">chain</span> Story
 
-**Operator,** Juan Botes | 22 May 2026
+**Operator,** Juan Botes, 22 May 2026  
 
 ## Chapter 1, The Briefing
 
