@@ -1,5 +1,5 @@
 title: "Juan Botes | Red Team Operator"
-description: "Kill chain stories, red team tradecraft, and offensive security study notes."
+description: "Kill chain stories, red team tradecraft, and offensive security notes."
 author: "Juan Botes"
-show_excerpts: true
 permalink: /:title/
+exclude: [README.md]
