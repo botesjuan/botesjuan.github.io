@@ -8,6 +8,26 @@
   <title>Juan Botes | Red Team Operator</title>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
   <style>
+     
+    .skippy-img {
+      position: fixed;
+      top: 140px;
+      left: 20px;
+      width: 225px;
+      height: 285px;
+      object-fit: cover;
+      border-radius: 52%;
+      border: 2px solid #00d4ff;
+      box-shadow: 0 0 12px rgba(0,212,255,0.4);
+      z-index: 200;
+      opacity: 0.85;
+    }
+
+    @media (max-width: 768px) {
+      .skippy-img {
+        display: none;
+      }
+    }
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:#050a12;color:#a0c4d8;font-family:'Share Tech Mono',monospace;font-size:15px;line-height:1.9;min-height:100vh;}
 
@@ -353,22 +373,11 @@
   <a href="https://github.com/botesjuan/botesjuan.github.io" target="_blank">View Source on GitHub</a>
 </footer>
 
-  <img 
+<img 
   src="/assets/images/hack-for-peanuts.png" 
   alt="SkippyPeanut"
-  style="
-    position: fixed;
-    top: 140px;
-    left: 20px;
-    width: 225px;
-    height: 285px;
-    object-fit: cover;
-    border-radius: 52%;
-    border: 2px solid #00d4ff;
-    box-shadow: 0 0 12px rgba(0,212,255,0.4);
-    z-index: 200;
-    opacity: 0.85;
-  "
+  class="skippy-img"
 >
+
 </body>
 </html>
