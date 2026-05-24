@@ -25,6 +25,15 @@ The objective, obtain a single low <span class="cyan">privilege</span> user acco
 
 The command and control (<span class="kw">C2</span>) communication path did not yet exist. The <span class="kw">C2</span> <span class="kw">chain</span> of malware beacons would have to be built, hop by hop, identity by identity, to reach the crown jewels.
 
+<figure style="margin:28px 0;text-align:center;">
+  <img src="/assets/images/redacted-crto-landscape.png" 
+       alt="Recon Phase" 
+       style="max-width:100%;border:1px solid #0d3a5c;border-left:3px solid #00d4ff;">
+  <figcaption style="font-size:11px;color:#5a8faa;letter-spacing:2px;margin-top:8px;text-transform:uppercase;">
+    // Fig 01 — Recon Phase Network Map
+  </figcaption>
+</figure>
+
 ## Chapter 2, Arming Up
 
 Before a single connection was made to the target network, the <span class="red">red team</span> operator spent time at their own attacker workstation preparing. This preparation would be the difference between an attack that gets blocked in the first sixty seconds and one that completes without a single alert.
@@ -216,6 +225,15 @@ The vault's domain controller sat on a segmented network with no direct route fr
 A socks proxy was started inside the jump host beacon. Socks proxy is means to direct traffic from an outside host through another to reach normally unreachable destination. The proxy application on the attacker's desktop was pointed at the <span class="kw">C2</span> team server, configured to route all traffic destined for the secure storage vault's segmented network through the proxy and out via the jump host. From that moment, the attacker's PowerShell local window could send Active Directory queries directly to the vault's domain controller as naturally as if the two machines were on the same desk. Like working from home and actually trusted to work from home.
 
 The tunnel was open and pivoting the couch up to friends apartment via the staircase was possible with many swings to get there. The final attack could begin.
+
+<figure style="margin:28px 0;text-align:center;">
+  <img src="/assets/images/redacted-crto-beacon-kill-chain.png" 
+       alt="C2 Beacon" 
+       style="max-width:100%;border:1px solid #0d3a5c;border-left:3px solid #7b2fff;">
+  <figcaption style="font-size:11px;color:#5a8faa;letter-spacing:2px;margin-top:8px;text-transform:uppercase;">
+    // Fig 02 — C2 Beacon Traffic
+  </figcaption>
+</figure>
 
 ## Chapter 17, The Last Lock
 
