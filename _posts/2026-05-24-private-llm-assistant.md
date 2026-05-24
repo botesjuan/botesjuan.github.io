@@ -784,7 +784,7 @@ with a private LLM as the backend. Zero API costs. Zero data leaving the network
     &nbsp;·&nbsp;
     <a href="https://www.groupservice.co.za/llm_prompt.php" target="_blank">groupservice.co.za/llm_prompt.php</a>
   </div>
-  <div>Juan Botes · OSCP · CISSP · BSCP · CPTS · CEH · <span style="color:var(--cyan)">CRTO (pursuing)</span></div>
+  <div>Juan Botes · OSCP · CISSP · BSCP · CEH · HTB CPTS · CRTO</div>
 </div>
 
 </div>
