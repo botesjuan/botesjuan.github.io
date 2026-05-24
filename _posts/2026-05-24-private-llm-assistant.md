@@ -595,7 +595,7 @@
 
     <!-- Pi layer -->
     <div class="node">
-      <div class="node-ip">192.168.255.29</div>
+      <div class="node-ip"><front-end-ip></div>
       <div class="node-label" style="color:var(--cyan)">Public Frontend Node</div>
       <div class="node-name">Raspberry Pi 4</div>
       <div class="node-detail">Apache · SSL termination · Postfix · SIEM dashboard · Audit logging</div>
@@ -611,7 +611,7 @@
 
     <!-- LLM Backend -->
     <div class="node" style="border-color:rgba(179,136,255,0.3);">
-      <div class="node-ip">192.168.255.86</div>
+      <div class="node-ip"><llm-box-ip></div>
       <div class="node-label" style="color:var(--purple)">Private LLM Backend — z490</div>
       <div class="node-name">Ubuntu Server 24.04 LTS</div>
       <div class="node-detail">MSI Z490-A PRO · i7-10700 · 64GB DDR4 · RTX 4060 Ti 16GB VRAM · Headless</div>
@@ -627,14 +627,14 @@
 
     <!-- Desktop CLI -->
     <div class="node">
-      <div class="node-ip">192.168.255.51</div>
+      <div class="node-ip"><cli-client-ip></div>
       <div class="node-label" style="color:var(--amber)">Internal CLI Client</div>
       <div class="node-name">Ubuntu Desktop</div>
       <div class="node-detail">Private Claude Code CLI agent · Kali VM · Direct LLM API access for testing</div>
       <div style="margin-top:10px">
         <span class="node-badge badge-amber">CLI Agent</span>
         <span class="node-badge badge-amber">Kali VM</span>
-        <span class="node-badge badge-green">ssh bot@192.168.255.86</span>
+        <span class="node-badge badge-green">ssh user@<llm-box-ip></span>
       </div>
     </div>
 
@@ -673,7 +673,7 @@
     <div class="spec-card">
       <div class="spec-card-label">Network</div>
       <div class="spec-card-value">RTL8125 2.5GbE</div>
-      <div class="spec-card-sub">Static IP · 192.168.255.86 · LAN only</div>
+      <div class="spec-card-sub">Static IP · <llm-box-ip> · LAN only</div>
     </div>
     <div class="spec-card">
       <div class="spec-card-label">Display (iGFX)</div>
@@ -683,7 +683,7 @@
     <div class="spec-card">
       <div class="spec-card-label">Access</div>
       <div class="spec-card-value">SSH key only</div>
-      <div class="spec-card-sub">bot@192.168.255.86 · ed25519 · Password auth disabled</div>
+      <div class="spec-card-sub">user@<llm-box-ip> · ed25519 · Password auth disabled</div>
     </div>
   </div>
 
@@ -701,7 +701,7 @@
   <div class="code-block" data-lang="stack">
 <code><span class="c-green">LLM Runtime</span>
   Ollama                    <span class="c-dim"># GPU-accelerated model serving</span>
-  OLLAMA_BASE_URL           <span class="c-amber">http://192.168.255.86:11434</span>
+  OLLAMA_BASE_URL           <span class="c-amber">http://<llm-box-ip>:11434</span>
 
 <span class="c-green">Active Models</span>
   hf.co/TrevorJS/gemma-4-E2B-it-uncensored-GGUF:Q4_K_M   <span class="c-dim"># primary</span>
@@ -720,12 +720,12 @@
   Docker containers         <span class="c-dim"># isolated tool execution</span>
 
 <span class="c-green">Firewall</span>
-  ufw                       <span class="c-dim"># ports 22/80/443 from 192.168.255.29 only</span></code>
+  ufw                       <span class="c-dim"># ports 22/80/443 from <front-end-ip> only</span></code>
   </div>
 
   <h3>Public Frontend — groupservice.co.za</h3>
   <div class="code-block" data-lang="stack">
-<code><span class="c-green">Host</span>         Raspberry Pi 4 · 192.168.255.29
+<code><span class="c-green">Host</span>         Raspberry Pi 4 · <front-end-ip>
 <span class="c-green">Web Server</span>   Apache · Let's Encrypt SSL
 <span class="c-green">Auth</span>         llm_admin · MFA enabled
 <span class="c-green">App</span>          /llm_prompt.php  →  proxies to Ollama API on z490
@@ -852,7 +852,7 @@
   <!-- SECTION 6: PRIVATE CLI AGENT -->
   <h2><span class="num">06 //</span> Private CLI Agent Design</h2>
 
-  <p>The private CLI agent is a Python tool running on the Ubuntu desktop (<code>192.168.255.51</code>) that mirrors the Claude Code experience — but uses the local LLM box as its brain.</p>
+  <p>The private CLI agent is a Python tool running on the Ubuntu desktop (<code><cli-client-ip</code>) that mirrors the Claude Code experience — but uses the local LLM box as its brain.</p>
 
   <div class="code-block" data-lang="flow">
 <code><span class="c-green">You</span> (terminal prompt)
@@ -860,7 +860,7 @@
   ▼
 <span class="c-cyan">agent.py</span>  ←  reads AGENT.md (permissions + context)
   │
-  ├─ sends goal to <span class="c-amber">http://192.168.255.86:11434/api/chat</span>
+  ├─ sends goal to <span class="c-amber">http://<llm-box-ip>:11434/api/chat</span>
   │
   ▼
 <span class="c-purple">LLM (gemma-4 / qwen2.5:14b)</span>
