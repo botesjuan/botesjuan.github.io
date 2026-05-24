@@ -250,13 +250,17 @@
     {% for post in site.posts %}
     <div class="post-card">
       <div class="post-date">
-        {{ post.date | date: "%Y-%m-%d" }} · {{ post.categories | join: " · " }}
+        {{ post.date | date: "%Y-%m-%d" }}{% if post.categories != empty %} · {{ post.categories | join: " · " }}{% endif %}
       </div>
       <div class="post-title">
         <a href="{{ post.url }}">{{ post.title }}</a>
       </div>
       <div class="post-excerpt">
-        {{ post.excerpt | strip_html | truncatewords: 30 }}
+        {% if post.excerpt %}
+          {{ post.excerpt | strip_html | truncatewords: 30 }}
+        {% else %}
+          {{ post.content | strip_html | truncatewords: 30 }}
+        {% endif %}
       </div>
       <div>
         {% for tag in post.tags %}
