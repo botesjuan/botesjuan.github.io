@@ -438,6 +438,20 @@ no cloud dependency, no data leakage, full tool execution capability for profess
   vendor-neutral build summary for anyone researching the same setup.
 </div>
 
+<div class="callout improvement">
+  <div class="callout-label">💡 Latest iteration — robustness, memory &amp; UX</div>
+  The most recent round of work hardened the loop and the experience:
+  <strong style="color:#fff">the agent always returns a structured answer</strong> now (a forced
+  closing summary when it hits a step/time limit, instead of a bare "max steps" error);
+  <strong style="color:#fff">persistent vector memory</strong> (ChromaDB) gives long, complex runs a
+  working memory so they stay within the model's context window without losing earlier findings;
+  the web portal gained <strong style="color:#fff">multiple, persistent conversations</strong> (a
+  ChatGPT-style sidebar); and — because this is a single, authorised operator — I relaxed one guardrail
+  to allow <code>&amp;&amp;</code> tool-sequencing while keeping the no-shell / scope guarantees intact.
+  A future <strong style="color:#fff">vetted user-registration</strong> phase is designed but deliberately
+  not yet built. Details in §08–§09 and the expanded glossary.
+</div>
+
 <h2><span class="num">01 //</span> Project Goal</h2>
 
 <p>The goal is to build a fully private, self-hosted AI security assistant that operates like
@@ -691,18 +705,42 @@ before anything reaches the GPU node, which is firewalled to the LAN.</p>
   <div class="goal">
     <div class="goal-num">08</div>
     <div class="goal-text">
-      <strong>ChromaDB vector store</strong>
-      <span>Persistent memory · RAG over pentest notes, CVEs, client reports</span>
+      <strong>ChromaDB vector store — two-tier memory</strong>
+      <span>Long-term cross-session recall + in-run working memory · bounds context so long runs don't overflow</span>
     </div>
-    <span class="status active">⬡ IN PROGRESS</span>
+    <span class="status done">✓ DONE</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">08b</div>
+    <div class="goal-text">
+      <strong>Loop robustness — always returns an answer</strong>
+      <span>Forced closing summary on step/time limits · blocked commands don't burn the budget · raised caps</span>
+    </div>
+    <span class="status done">✓ DONE</span>
   </div>
   <div class="goal">
     <div class="goal-num">09</div>
+    <div class="goal-text">
+      <strong>Web portal — multiple persistent conversations</strong>
+      <span>ChatGPT-style sidebar · new / switch / delete · file-backed per-user store outside the web root</span>
+    </div>
+    <span class="status done">✓ DONE</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">09b</div>
     <div class="goal-text">
       <strong>Web frontend upgrade — file + image upload</strong>
       <span>llm_prompt.php enhanced · File upload · Image upload · Image-to-text via LLM backend</span>
     </div>
     <span class="status planned">◻ PLANNED</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">09c</div>
+    <div class="goal-text">
+      <strong>Vetted new-user registration &amp; approval</strong>
+      <span>Self-service request → admin approval → MFA enrol · default-deny · Agent mode admin-only at first</span>
+    </div>
+    <span class="status future">◈ FUTURE</span>
   </div>
   <div class="goal">
     <div class="goal-num">10</div>
@@ -855,9 +893,66 @@ so long loops blow the HTTP timeout and the browser user gets nothing (the CLI c
 an async job model (<code>/run</code> → <code>job_id</code> → poll <code>/status</code>) or SSE streaming,
 so the operator sees each Thought / Action / Observation live. That's the next build target.</p>
 
-<h2><span class="num">09 //</span> Learning Integration — Anthropic Academy</h2>
+<h2><span class="num">09 //</span> Latest Iteration — Memory, a Loop That Always Answers, &amp; Conversations</h2>
 
-<p>This project is being built in parallel with structured learning from <a href="https://academy.anthropic.com" target="_blank">Anthropic Academy</a>. The following modules directly inform the agent architecture decisions:</p>
+<p>The most recent round of work was about making the assistant <em>dependable</em> on long, messy,
+real-world prompts — and pleasant to actually use day to day. Four changes stand out.</p>
+
+<h3>A loop that always returns something useful</h3>
+<p>Early on, a broad prompt ("assess this site") could make the agent loop over many tools and then hit
+an internal step or time limit and return a bare <code>"max steps reached"</code> — throwing away all the
+real output it had gathered. Now, whenever the loop hits any limit, it makes one final
+<strong style="color:#fff">forced summary call</strong> that turns whatever it found into a structured
+Summary / Findings / Next-steps answer. Two supporting fixes: <strong style="color:#fff">blocked commands
+no longer consume the tool budget</strong> (a denied command did no work, so it shouldn't count), and the
+caps were raised now that memory keeps long runs in check.</p>
+
+<h3>Persistent vector memory (ChromaDB) — two tiers</h3>
+<p>The big one. A local vector store now gives the agent two kinds of memory:</p>
+<ul>
+  <li><strong style="color:#fff">Long-term memory</strong> — curated summaries/findings that persist across sessions, retrieved at the <em>start</em> of a run to seed context.</li>
+  <li><strong style="color:#fff">In-run working memory</strong> — every tool observation of the current run, tagged to that run and retrieved each step. This is what lets the loop <strong style="color:#fff">bound the live context window</strong> (keep only the last few turns inline) while still recalling earlier findings on demand.</li>
+</ul>
+<p>The practical payoff: a long investigation that runs many tools no longer overflows the model's context
+or "forgets" what it found in step 1. In testing, a six-tool run whose first <code>nmap</code> output had
+scrolled out of the live window still surfaced those ports — and the TLS results — in the final combined
+summary, because they were retrieved from working memory. That is retrieval-augmented memory doing exactly
+its job.</p>
+
+<h3>Multiple, persistent conversations in the web portal</h3>
+<p>The portal kept only a single rolling chat in the login session. It now has a
+<strong style="color:#fff">ChatGPT-style conversation sidebar</strong>: start a new chat, switch between
+past ones, delete them — and they persist across logins. Conversations are stored as per-user files
+<strong style="color:#fff">outside the web root</strong> (not reachable by URL), with titles derived from
+the first message. Worth stressing a distinction that trips people up: this
+<strong style="color:#fff">conversation history</strong> (frontend, per-user chat threads) is a different
+thing from the agent's <strong style="color:#fff">memory</strong> (backend vector store for the tool loop).
+Same word, two layers.</p>
+
+<h3>One guardrail, deliberately relaxed</h3>
+<p>Because this is a <strong style="color:#fff">single, authorised operator</strong> — not an anonymous
+public service — I relaxed the rule that blocked <code>&amp;&amp;</code>, so the model can sequence a few
+tools in one step (<code>whatweb … &amp;&amp; sslscan …</code>). The safety bar stayed exactly where it was:
+the command is split on <code>&amp;&amp;</code>, and <strong style="color:#fff">each sub-command is validated
+independently</strong> (allowlist, destructive denylist, and the in-scope egress check) and run on its own
+argument list — <em>never</em> through a real shell. So a chain like <code>whatweb &lt;in-scope&gt; &amp;&amp;
+curl evil.com</code> is still blocked in full. This is a good example of a security decision that follows the
+<strong style="color:#fff">trust boundary</strong>: when the principal is trusted and vetted, you can trade
+some friction for usability — without giving up the structural controls.</p>
+
+<div class="callout">
+  <div class="callout-label">🔭 Next: a vetted user-registration phase (designed, not built)</div>
+  Today the portal is single-operator. The next milestone is letting others <em>request</em> access while
+  keeping a strict <strong style="color:#fff">human-in-the-loop</strong>: a registration request creates a
+  <em>pending</em> account that can log in to nothing until the admin explicitly approves it (default-deny),
+  followed by MFA enrolment. Tool-executing "Agent mode" stays admin-only at first. This introduces a small
+  <strong style="color:#fff">principal hierarchy</strong> — admin vs approved user — each with its own
+  <strong style="color:#fff">persona</strong> and permissions, all still behind the same private trust boundary.
+</div>
+
+<h2><span class="num">10 //</span> Learning Integration — Anthropic Academy</h2>
+
+<p>This project is being built in parallel with structured learning using, <a href="https://academy.anthropic.com" target="_blank">Anthropic Academy</a> and <a href="https://ine.com/security/certifications/eais-certification" target="_blank">INE eAIS - AI/LLM Systems Security Specialist Architect</a>. The following modules directly inform the private LLM assistant and agent architecture design decisions:</p>  
 
 <div class="learning-grid">
   <div class="learning-card">
@@ -890,19 +985,24 @@ so the operator sees each Thought / Action / Observation live. That's the next b
   what to call and how to call it.
 </div>
 
-<h2><span class="num">10 //</span> Next Steps</h2>
+<h2><span class="num">11 //</span> Next Steps</h2>
 
 <ol>
-  <li>Move long agent runs to an async/streaming model so investigative loops show live progress and never time out in the browser.</li>
-  <li>Finish the ChromaDB memory layer — RAG over pentest notes, CVE feeds, and past engagement reports.</li>
-  <li>Relax the metacharacter rule for legitimate query-string URLs now that the scope/egress allowlist is the real control.</li>
-  <li>Add second NVMe storage for model-library expansion (dedicated <code>/models</code> + <code>/data</code> mounts).</li>
+  <li>Move long agent runs to an async/streaming model so investigative loops show live progress (the loop already always returns a final summary — this is about live feedback).</li>
+  <li>Ingest real pentest notes, CVE feeds, and past engagement reports into the long-term memory tier so recall draws on actual knowledge.</li>
+  <li>Build the vetted new-user registration &amp; approval flow — request → admin approval → MFA enrol, default-deny, Agent mode admin-only at first.</li>
   <li>Upgrade the web frontend with file + image upload and image-to-text via a multimodal endpoint.</li>
+  <li>Add second NVMe storage for model-library expansion (dedicated <code>/models</code> + <code>/data</code> mounts).</li>
   <li>Integrate a PII / POPIA sanitisation layer before any real client data touches the system.</li>
   <li>Document each completed phase as a follow-up post on this blog.</li>
 </ol>
 
-<h2><span class="num">11 //</span> Build Summary — For Anyone Researching the Same Setup</h2>
+<p><strong style="color:#fff">Already shipped since launch:</strong> end-to-end Agent mode, the dynamic
+<code>execute_command</code> tool with allowlist + egress guardrails, two-tier ChromaDB memory, a loop that
+always returns a structured answer, safe <code>&amp;&amp;</code> tool-sequencing, and multi-conversation
+persistence in the portal.</p>
+
+<h2><span class="num">12 //</span> Build Summary — For Anyone Researching the Same Setup</h2>
 
 <p>A vendor-neutral blueprint for a private, self-hosted, tool-executing LLM assistant. No secret sauce —
 just the components and the order that worked. Swap any piece for an equivalent.</p>
@@ -963,7 +1063,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
   first, expose the agent second.
 </div>
 
-<h2><span class="num">12 //</span> Glossary — Plain-English LLM Terms</h2>
+<h2><span class="num">13 //</span> Glossary — Plain-English LLM Terms</h2>
 
 <p>New to the AI side of this? Here are the key terms used above, in everyday language.</p>
 
@@ -1077,6 +1177,46 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
   <div class="gloss">
     <div class="term">Prompt injection</div>
     <div class="def">An attack where malicious instructions are hidden in content the model reads (a web page, a file, tool output) to hijack its behaviour. "Indirect" injection comes from data the agent fetches rather than the user — the exact issue caught and fixed in section 07.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Orchestrator</div>
+    <div class="def">The component that <em>drives</em> the agent: it takes your goal, runs the reason→act→observe loop, calls the model, executes the chosen tool, feeds the result back, and decides when to stop. In this project it's a small service the web portal hands a prompt to when "Agent mode" is on. Think of it as the conductor — the model is one instrument it cues.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Tool sandbox</div>
+    <div class="def">The locked-down box a tool actually runs in — here, a throwaway Docker container as a non-root user with no extra privileges and tight limits. If a tool misbehaves or is abused, the blast radius is the container, not the host. Isolating execution is what makes it safe to let an LLM run real commands.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Memory</div>
+    <div class="def">What the assistant can recall <em>beyond the current message</em>. Here it's the agent's vector store (section 09): "long-term" memory of past findings across sessions, and "working" memory of the current run so a long investigation doesn't forget its earlier steps. Distinct from conversation history below — memory is the agent recalling facts; history is the literal chat transcript.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Conversation history</div>
+    <div class="def">The saved back-and-forth of a chat — your messages and the assistant's replies — kept so you can scroll back, continue later, or keep several separate chats. In this project each conversation is stored as a per-user file and shown in the portal's sidebar. It's a frontend record of <em>what was said</em>, separate from the agent's "memory" of <em>what it learned</em>.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Trust boundary</div>
+    <div class="def">An imaginary line separating things you trust from things you don't — and where you therefore check, authenticate, or sanitise. Crossing it should require proof. Here the public internet → the authenticated Pi is one boundary; the model's own output → a real command is another (which is why every command is validated). Good security design is mostly knowing where your boundaries are and guarding them.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Principal</div>
+    <div class="def">A "principal" is any identity the system can act as or on behalf of — a user, an admin, a service. A <strong style="color:#fff">principal hierarchy</strong> is the ranking of those identities by privilege: e.g. <em>admin</em> &gt; <em>approved user</em> &gt; <em>pending/anonymous</em>. It decides who can do what — in the planned registration phase, only an admin can approve accounts or run tool-executing "Agent mode".</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Persona</div>
+    <div class="def">The "character" an LLM is told to adopt — its role, tone, rules, and what it will or won't do — set mainly through its system prompt. This assistant's persona is a focused, no-lecture penetration-testing helper. Different users could be given different personas (and different limits) by the admin.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Human-in-the-loop</div>
+    <div class="def">A design where a person must review or approve a step before it takes effect, rather than letting the system act fully autonomously. It trades some speed for control and accountability. Examples here: the planned <em>admin approval</em> of every new account before it works, and keeping high-impact "Agent mode" gated to a trusted operator.</div>
   </div>
 
 </div>
