@@ -1063,7 +1063,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
   first, expose the agent second.
 </div>
 
-<h2><span class="num">13 //</span> Glossary — Plain-English LLM Terms</h2>
+<h2><span class="num">13 //</span> Glossary of LLM Terms</h2>
 
 <p>New to the AI side of this? Here are the key terms used above, in everyday language.</p>
 
