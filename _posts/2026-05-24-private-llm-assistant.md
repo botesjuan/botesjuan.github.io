@@ -1065,7 +1065,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
 
 <h2><span class="num">13 //</span> Glossary of LLM Terms</h2>
 
-<p>New to the AI side of this? Here are the key terms used above, in everyday language.</p>
+<p>Here are the key terms used above, in my Private LLM Assistant infrastructure.</p>
 
 <div class="glossary">
 
@@ -1095,6 +1095,16 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
   </div>
 
   <div class="gloss">
+    <div class="term">Ollama</div>
+    <div class="def">The local model-serving software used in this project. It downloads, stores, and runs open models on your own hardware and exposes them over a simple Model API — so everything stays offline on the GPU node instead of going to a cloud provider.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">FastAPI</div>
+    <div class="def">A popular Python framework for building web APIs quickly. It's the kind of tool used to wrap an agent or model behind a clean HTTP endpoint (the orchestrator here plays that role) so the web portal can hand it a prompt and get a structured reply back.</div>
+  </div>
+
+  <div class="gloss">
     <div class="term">Token</div>
     <div class="def">The small chunks of text a model reads and writes — roughly a word or part of a word. Models measure everything (input length, output length, cost) in tokens, not characters.</div>
   </div>
@@ -1120,6 +1130,16 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
   </div>
 
   <div class="gloss">
+    <div class="term">Deterministic</div>
+    <div class="def">Producing the same output every time for the same input. Models are <em>not</em> deterministic by default — randomness (temperature/top-k) makes replies vary. Turning temperature to 0 pushes toward deterministic, repeatable output, which matters when you need an exact command rather than a creative one. Some safety controls in this project are deliberately deterministic — e.g. returning a tool's real output verbatim instead of letting the model re-type it.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Hallucination <span class="alt">fabrication</span></div>
+    <div class="def">When a model confidently makes something up — invents a fact, a file path, or even fake command output that looks real. It's the central reliability risk with LLMs. This project fights it two ways: RAG grounds answers in real documents, and the agent returns <em>actual</em> tool output rather than trusting the model to reproduce it (a parser bug that let the model fabricate results was caught and fixed in section 07).</div>
+  </div>
+
+  <div class="gloss">
     <div class="term">Quantization</div>
     <div class="def">Shrinking a model by storing its numbers at lower precision (e.g. "Q4" = 4-bit). It makes models smaller and faster so they fit on consumer GPUs, with a small quality trade-off. It's why a big model can run on a 16&nbsp;GB graphics card.</div>
   </div>
@@ -1130,8 +1150,8 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
   </div>
 
   <div class="gloss">
-    <div class="term">Vector database</div>
-    <div class="def">A database built to store embeddings and quickly find the ones most similar to a given query. It's the engine behind "find me the most relevant notes," even when the wording is different.</div>
+    <div class="term">Vector database <span class="alt">vector store</span></div>
+    <div class="def">A database built to store embeddings and quickly find the ones most similar to a given query. It's the engine behind "find me the most relevant notes," even when the wording is different. The retrieval step in RAG — turning your question into an embedding and pulling the closest chunks back out — happens here.</div>
   </div>
 
   <div class="gloss">
@@ -1197,6 +1217,31 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
   <div class="gloss">
     <div class="term">Conversation history</div>
     <div class="def">The saved back-and-forth of a chat — your messages and the assistant's replies — kept so you can scroll back, continue later, or keep several separate chats. In this project each conversation is stored as a per-user file and shown in the portal's sidebar. It's a frontend record of <em>what was said</em>, separate from the agent's "memory" of <em>what it learned</em>.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Sensitive data</div>
+    <div class="def">Information that would cause harm if exposed — credentials, customer records, health or financial details, internal findings. A core reason this assistant is built <em>private</em> and offline: pentest reports and target data never leave infrastructure the operator controls, so there's no third party to leak or subpoena them.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">PII <span class="alt">personally identifiable information</span></div>
+    <div class="def">Data that identifies a specific person — name, ID number, email, address, phone. It's regulated under privacy laws (e.g. POPIA, GDPR) and must be handled and stored carefully. A key reason to keep an LLM local: pasting PII into a public chatbot can be a breach in itself.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">PCI <span class="alt">PCI DSS</span></div>
+    <div class="def">The Payment Card Industry Data Security Standard — the rules for handling cardholder data (card numbers, CVVs). Finding PCI data exposed during a test is high-impact, and processing it through an uncontrolled cloud service would itself violate the standard. Another driver for a self-hosted, auditable setup.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">BAA <span class="alt">business associate agreement</span></div>
+    <div class="def">A legal contract (from US HIPAA) that binds a vendor handling protected health data to safeguard it. It matters here as the cloud-AI contrast: using a hosted model on regulated data usually <em>requires</em> a BAA or equivalent — friction a fully private, offline assistant sidesteps because no outside party ever sees the data.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Observability &amp; tracing</div>
+    <div class="def">Tools and logs that let you see <em>what the system actually did</em> — every prompt, model call, tool execution, and result, end to end. Essential for debugging an agent and for evidence: in this project each tool run and prompt is logged so a multi-step agent action can be reconstructed and trusted after the fact.</div>
   </div>
 
   <div class="gloss">
