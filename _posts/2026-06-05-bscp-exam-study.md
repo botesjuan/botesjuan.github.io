@@ -27,7 +27,21 @@ The repo has grown into one of the most referenced BSCP study resources on GitHu
 
 ## What is inside
 
-The repository is organised around the way the exam actually plays out, not around a textbook table of contents.
+The repository is organised around the way the exam actually plays out, not around a textbook table of contents. The BSCP hands you **two separate vulnerable web applications**, and you must fully compromise *both* — there is no partial credit, you need a clean **100%** to pass, which means walking the same four-phase kill chain to completion on each app inside the time limit.
+
+### 1. Enumeration and scanning focus points
+Every chain starts with mapping the application. Crawl the site, catalogue every parameter, cookie, header, and endpoint, and run a targeted Burp scan over the in-scope hosts to surface the obvious primitives. On the exam you are looking for the *one* foothold bug per app, so the focus is recognising the vulnerability class fast — an unsanitised input, a reflected parameter, a leaky API route — rather than boiling the ocean. The repo's wordlists and notes point you straight at the high-yield areas the PortSwigger labs reuse.
+
+### 2. Gaining a foothold as low-privilege user "Carlos"
+The first objective on each app is to break in as the standard low-privilege account, conventionally named **Carlos**. This is almost always a **client-side or authentication exploit** — a stored or reflected <span class="red">XSS</span> that steals Carlos's session cookie to your exploit server, a CSRF chain, an OAuth or password-reset flaw, or business-logic abuse. The payloads folder is built for exactly this moment: ready-to-fire exploit-server pages and cookie-exfiltration snippets you can paste and adapt rather than write under pressure.
+
+### 3. Privilege escalation to administrator inside the web app
+Holding Carlos is not enough — you must climb from low-privilege user to the **administrator** of the same application. This is where you steal or forge a higher-privilege token, abuse a flaw that exposes admin credentials, or pivot a second vulnerability (SQL injection, IDOR, broken access control, JWT weaknesses) into an admin session. The goal is reaching the admin-only functionality that the final phase depends on.
+
+### 4. Data exfiltration as the administrator
+With admin access secured, the last phase is reading the **sensitive flag** — the secret the exam scores you on. This typically means abusing an admin-only feature to achieve **command injection, file read, SSRF, or deserialization**, then exfiltrating the target data. Only when you have submitted the secret from *both* applications does the exam mark you complete.
+
+Everything in the repo maps onto those four phases:
 
 - **Payloads** — ready-to-fire snippets for the vulnerability classes that show up under exam conditions: cross-site scripting, SQL injection, SSRF, XXE, prototype pollution, request smuggling, and the authentication chains that tie them together.
 - **Python** — small purpose-built scripts to automate the parts of the exam that are too slow to do by hand, such as brute-forcing a stay-logged-in cookie, scripting a blind data exfiltration, or generating malicious payloads on the fly.

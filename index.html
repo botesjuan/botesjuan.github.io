@@ -143,6 +143,17 @@
     .bar-fill{height:4px;border-radius:2px;}
     .fill-cyan{background:#00d4ff;} .fill-purple{background:#7b2fff;} .fill-green{background:#00ff88;}
 
+    /* Visit counter widget */
+    .visit-counter{
+      display:flex;align-items:center;gap:10px;
+      background:#020810;border:1px solid #0d3a5c;
+      border-left:3px solid #7b2fff;
+      padding:12px 14px;
+    }
+    .vc-icon{color:#7b2fff;font-size:14px;animation:blink 2s step-end infinite;}
+    .vc-count{font-family:'Orbitron',monospace;font-size:20px;color:#00d4ff;font-weight:700;letter-spacing:1px;}
+    .vc-label{font-size:10px;color:#5a8faa;letter-spacing:2px;text-transform:uppercase;margin-left:auto;}
+
     footer{
       position:relative;z-index:2;
       border-top:1px solid #0d3a5c;padding:24px 40px;
@@ -365,6 +376,15 @@
       <div class="cert-row"><a href="https://github.com/botesjuan" target="_blank" style="color:#00d4ff;text-decoration:none;">⌥ GitHub Profile</a></div>
       <div class="cert-row"><a href="https://www.youtube.com/@InfoSecAnimalSquad" target="_blank" style="color:#7b2fff;text-decoration:none;">▶ InfoSec Animal Squad</a></div>
     </div>
+
+    <div class="sidebar-block">
+      <div class="sidebar-title">Site Visits</div>
+      <div class="visit-counter">
+        <span class="vc-icon">▲</span>
+        <span class="vc-count" id="vc-count">····</span>
+        <span class="vc-label">Total Hits</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -373,11 +393,26 @@
   <a href="https://github.com/botesjuan/botesjuan.github.io" target="_blank">View Source on GitHub</a>
 </footer>
 
-<img 
-  src="/assets/images/hack-for-peanuts.png" 
+<img
+  src="/assets/images/hack-for-peanuts.png"
   alt="SkippyPeanut"
   class="skippy-img"
 >
+
+<!-- GoatCounter: botesjuan.goatcounter.com -->
+<script data-goatcounter="https://botesjuan.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+<script>
+  (function(){
+    var code = 'botesjuan'; // goatcounter.com site code
+    var el = document.getElementById('vc-count');
+    if (!el || code === 'YOURCODE') return; // skip fetch until configured
+    fetch('https://' + code + '.goatcounter.com/counter/TOTAL.json')
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if (d && d.count) el.textContent = d.count; })
+      .catch(function(){ el.textContent = '—'; });
+  })();
+</script>
 
 </body>
 </html>
