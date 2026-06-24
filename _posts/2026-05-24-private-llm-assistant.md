@@ -766,6 +766,14 @@ before anything reaches the GPU node, which is firewalled to the LAN.</p>
     </div>
     <span class="status future">◈ FUTURE</span>
   </div>
+  <div class="goal">
+    <div class="goal-num">13</div>
+    <div class="goal-text">
+      <strong>Specialist model training — engagement-type fine-tuned tool calling</strong>
+      <span>Per-engagement specialists (web/API · internal/AD) · QLoRA on the RTX 4060 Ti · two generic shell primitives, no hard-coded tool list · routed by engagement type in the orchestrator</span>
+    </div>
+    <span class="status active">▷ IN PROGRESS</span>
+  </div>
 </div>
 
 <h2><span class="num">06 //</span> The ReAct Agent — How It Actually Runs Tools</h2>
@@ -988,6 +996,7 @@ some friction for usability — without giving up the structural controls.</p>
 <h2><span class="num">11 //</span> Next Steps</h2>
 
 <ol>
+  <li><strong style="color:#fff">Train the engagement-type specialist models</strong> — fine-tune purpose-built web/API and infra/AD brains with open tool calling on the RTX 4060 Ti (see <a href="#specialist-model-training">Section 12 — Specialist Model Training</a>); currently expanding the training datasets and preparing the first QLoRA runs.</li>
   <li>Move long agent runs to an async/streaming model so investigative loops show live progress (the loop already always returns a final summary — this is about live feedback).</li>
   <li>Ingest real pentest notes, CVE feeds, and past engagement reports into the long-term memory tier so recall draws on actual knowledge.</li>
   <li>Build the vetted new-user registration &amp; approval flow — request → admin approval → MFA enrol, default-deny, Agent mode admin-only at first.</li>
@@ -1002,7 +1011,157 @@ some friction for usability — without giving up the structural controls.</p>
 always returns a structured answer, safe <code>&amp;&amp;</code> tool-sequencing, and multi-conversation
 persistence in the portal.</p>
 
-<h2><span class="num">12 //</span> Build Summary — For Anyone Researching the Same Setup</h2>
+<h2 id="specialist-model-training"><span class="num">12 //</span> Specialist Model Training — Engagement-Type Fine-Tuned Tool Calling</h2>
+
+<p><strong style="color:#fff">Status: In Progress · June 2026.</strong> The agent loop already runs well with
+<code>hermes3:8b</code> as the general-purpose brain. The next evolution is <strong style="color:#fff">purpose-built
+models</strong> — one fine-tuned for <em>web application &amp; API</em> engagements, another for <em>internal
+infrastructure &amp; Active Directory</em> work. The goal is concrete and hardware-bound: instead of steering one
+general model with an ever-growing system prompt, train a small specialist whose tool-selection reasoning lives in
+its <strong style="color:#fff">weights</strong> — so it picks the right tool, reads the output the way an operator
+in that domain would, and needs far less prompt engineering per engagement. All of it has to fit and train on a
+single 16&nbsp;GB consumer GPU.</p>
+
+<h3>The design decision — open tool selection, not a hard-coded menu</h3>
+
+<p>The first instinct was a closed allowlist baked into the <em>training data</em> — teach the model to call
+<code>run_ffuf</code>, <code>run_sqlmap</code>, <code>run_bloodhound</code>, and so on. That was
+<strong style="color:#fff">deliberately rejected.</strong> An experienced operator does not consult a menu. They
+reason about the task, choose the best publicly available tool for the job, check whether it is on the host,
+install it if not, and run it. The specialist models should do exactly the same — they must be free to call
+<strong style="color:#fff">any</strong> tool, not a fixed set.</p>
+
+<p>So the training dataset is built around <strong style="color:#fff">two generic shell primitives only:</strong></p>
+
+<ul>
+  <li><code>shell_exec(command)</code> — run any command, tool, or pipeline on the Linux host.</li>
+  <li><code>shell_install(method, package)</code> — install a missing tool via <code>apt</code>, <code>pip</code>, <code>pipx</code>, <code>go install</code>, or <code>git clone</code>.</li>
+</ul>
+
+<p>Every training example follows the same multi-turn shape:</p>
+
+<div class="code-block" data-lang="training pattern">
+<code><span class="c-green">operator prompt</span>
+  <span class="c-dim">→</span> assistant reasons: "best tool for this task is <span class="c-amber">X</span> because…"
+  <span class="c-dim">→</span> <span class="c-cyan">shell_exec</span>:  which X || echo NOT_FOUND
+  <span class="c-dim">→</span> if NOT_FOUND: <span class="c-cyan">shell_install</span> method=pip package=X
+  <span class="c-dim">→</span> <span class="c-cyan">shell_exec</span>:  X --flags target 2&gt;&amp;1
+  <span class="c-dim">→</span> assistant analyses output + recommends next steps</code>
+</div>
+
+<p>This teaches the model <strong style="color:#fff">how to think about tool selection</strong>, not just which
+tools to call. Crucially, scope enforcement and egress control stay in the orchestrator dispatcher — where they
+belong — <em>not</em> in the model. The model is free to reason about any tool; the deterministic guardrail layer
+decides what is actually allowed to execute.</p>
+
+<h3>Base model selection — on constrained hardware</h3>
+
+<p>After a smoke-test comparison on the z490 node, <strong style="color:#fff">Qwen2.5-7B-Instruct</strong> is the
+chosen base for fine-tuning at the 7B tier. It has native tool-call support baked into pre-training rather than
+bolted on after, reliably holds the multi-step <em>reason → check → install → execute → analyse</em> pattern, and
+fits comfortably in 16&nbsp;GB VRAM at 4-bit quantisation — the hard constraint of this build.</p>
+
+<p>Worth noting: the stack already runs <code>hermes3:8b</code> as the default, and Hermes 3 is a strong
+tool-calling contender that was evaluated head-to-head. At the 7B/8B size class, Qwen2.5 edges it on structured-output
+consistency — particularly keeping the reasoning step <em>before</em> the tool call across long multi-turn context.
+Hermes 3 at 70B (Q4) would change that calculus, but that needs hardware beyond the current node. The rule before
+committing to any fine-tuning run: <strong style="color:#fff">test both base models against your actual tool-call
+prompts first</strong> — pick whichever naturally produces the check → install → execute pattern without being
+prompted into it.</p>
+
+<h3>Training stack</h3>
+
+<p>Fine-tuning runs on the z490 GPU node using <strong style="color:#fff">Axolotl + QLoRA</strong>:</p>
+
+<div class="code-block" data-lang="training config">
+<code><span class="c-green">Base model</span>    Qwen/Qwen2.5-7B-Instruct
+<span class="c-green">Method</span>        QLoRA — 4-bit quantisation, LoRA rank 16
+<span class="c-green">Framework</span>     Axolotl (native ChatML + tool-call dataset support)
+<span class="c-green">Hardware</span>      RTX 4060 Ti 16GB — ~2–4 hours per training run
+<span class="c-green">Format</span>        ChatML JSONL — multi-turn tool-call conversations</code>
+</div>
+
+<p>Seed datasets are 8 examples each — enough to validate the pipeline end-to-end. Production training targets
+<strong style="color:#fff">500–1000 examples per specialist</strong>, sourced from sanitised engagement logs,
+BSCP lab notes, GOAD-Light AD lab sessions (from CRTO prep), and structured pentest write-ups converted to the
+ChatML tool-call format. All real engagement data runs through the existing <code>sanitise.py</code> POPIA/GDPR
+pipeline before it touches the training set.</p>
+
+<h3>Orchestrator integration</h3>
+
+<p>Once trained and merged, both models are served via Ollama and registered in the existing orchestrator. The
+engagement type passed at session start routes to the appropriate specialist:</p>
+
+<div class="code-block" data-lang="routing">
+<code><span class="c-amber">"web" / "api"</span>     →  web-api-pentest-specialist
+<span class="c-amber">"internal" / "ad"</span> →  infra-ad-pentest-specialist
+<span class="c-amber">default</span>           →  hermes3:8b  <span class="c-dim"># existing general model</span></code>
+</div>
+
+<p>The tool schema exposed to the specialists registers only the two primitives. Scope enforcement — exact-host
+match against <code>scope.yaml</code>, fail-closed — sits in the dispatcher <em>before</em> any
+<code>shell_exec</code> reaches the sandbox, unchanged from the existing guardrail stack.</p>
+
+<div class="callout improvement">
+  <div class="callout-label">💡 Why this is worth the effort</div>
+  The general <code>hermes3:8b</code> is good at <em>following</em> a system prompt that tells it to reason about
+  tools. A fine-tuned specialist has that reasoning <strong style="color:#fff">in its weights</strong> — it does
+  not need to be prompted into it, does not drift from the pattern on long context, and does not need per-engagement
+  prompt surgery. The payoff: a shorter, cleaner system prompt, more consistent tool-invocation structure, and
+  analysis that already speaks the right language for the engagement type. The secondary benefit holds even if the
+  fine-tune doesn't beat the base — the process forces a structured corpus of high-quality pentest reasoning
+  examples, which is worth building regardless.
+</div>
+
+<div class="goals">
+  <div class="goal">
+    <div class="goal-num">a</div>
+    <div class="goal-text"><strong>Dataset generator scripts written</strong><span>web/API + infra/AD seed sets</span></div>
+    <span class="status done">✓ DONE</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">b</div>
+    <div class="goal-text"><strong>Axolotl QLoRA configs tuned</strong><span>for RTX 4060 Ti 16GB</span></div>
+    <span class="status done">✓ DONE</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">c</div>
+    <div class="goal-text"><strong>Two-primitive tool schema defined &amp; validated</strong><span>shell_exec + shell_install only</span></div>
+    <span class="status done">✓ DONE</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">d</div>
+    <div class="goal-text"><strong>Orchestrator routing + scope enforcement designed</strong><span>engagement-type → specialist, dispatcher-side guardrails</span></div>
+    <span class="status done">✓ DONE</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">e</div>
+    <div class="goal-text"><strong>Dataset expansion to 500+ examples per specialist</strong><span>ongoing — sanitised logs, BSCP, GOAD-Light, write-ups</span></div>
+    <span class="status active">▷ IN PROGRESS</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">f</div>
+    <div class="goal-text"><strong>First QLoRA training run — web/API specialist</strong></div>
+    <span class="status planned">◻ PLANNED</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">g</div>
+    <div class="goal-text"><strong>First QLoRA training run — infra/AD specialist</strong></div>
+    <span class="status planned">◻ PLANNED</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">h</div>
+    <div class="goal-text"><strong>Smoke test — specialist vs base on engagement-type prompts</strong></div>
+    <span class="status planned">◻ PLANNED</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">i</div>
+    <div class="goal-text"><strong>Production deployment via Ollama on z490</strong></div>
+    <span class="status planned">◻ PLANNED</span>
+  </div>
+</div>
+
+<h2><span class="num">13 //</span> Build Summary — For Anyone Researching the Same Setup</h2>
 
 <p>A vendor-neutral blueprint for a private, self-hosted, tool-executing LLM assistant. No secret sauce —
 just the components and the order that worked. Swap any piece for an equivalent.</p>
@@ -1063,7 +1222,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
   first, expose the agent second.
 </div>
 
-<h2><span class="num">13 //</span> Glossary of LLM Terms</h2>
+<h2><span class="num">14 //</span> Glossary of LLM Terms</h2>
 
 <p>Here are the key terms used above, in my Private LLM Assistant infrastructure.</p>
 
