@@ -1,10 +1,10 @@
 ---
 layout: post
-title: "Red Team Operator: A Kill Chain Story"
+title: "Red Team Operator Kill Chain Story"
 date: 2026-05-23
 categories: [Red Team, Kill Chain]
 tags: [active-directory, cobalt-strike, red-team, kill-chain]
-excerpt: "A full narrative walkthrough of an adversary simulation engagement — from initial recon through domain compromise, lateral movement, and objective completion."
+excerpt: "A full narrative walkthrough of an adversary simulation engagement, from initial recon through domain compromise, lateral movement, and objective completion."
 ---
 
 

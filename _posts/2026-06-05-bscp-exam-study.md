@@ -1,10 +1,10 @@
 ---
 layout: post
-title: "BSCP Exam Study: A Field Guide to the Burp Suite Certified Practitioner"
-date: 2026-06-05
+title: "BSCP Exam Study Field Guide for the Burp Suite Certified Practitioner"
+date: 2023-03-25
 categories: [Web Security, Certification]
 tags: [bscp, burp-suite, xss, web-security, portswigger, certification]
-excerpt: "An open-source study companion for the Burp Suite Certified Practitioner exam — payloads, scripts, wordlists, and the practical tradecraft that gets you through the two-hour clock."
+excerpt: "My study notes as companion for the Burp Suite Certified Practitioner exam, with payloads, scripts, wordlists, and the practical tradecraft that gets you through the two-hour clock and achieving 100%."
 ---
 
 <style>

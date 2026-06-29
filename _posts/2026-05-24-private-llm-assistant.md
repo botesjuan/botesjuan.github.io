@@ -1,10 +1,10 @@
 ---
 layout: post
-title: "Building a Private LLM Security Assistant"
+title: "Building & Hosting My Own Private LLM Security Assistant"
 date: 2026-05-24
 categories: [AI, LLM Security]
 tags: [llm, ollama, ai-security, red-team, penetration-tester]
-excerpt: "How to build a fully offline LLM assistant for penetration testing using Ollama and local models — no data leaves your machine."
+excerpt: "How I am building a fully offline LLM assistant for penetration testing using Ollama with local models, no data leaves my hosts."
 ---
 
 <style>

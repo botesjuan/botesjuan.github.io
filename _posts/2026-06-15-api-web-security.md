@@ -1,10 +1,10 @@
 ---
 layout: post
-title: "API & Web Security: Notes from the OWASP API Top 10 Trenches"
-date: 2026-06-15
+title: "API & Web Security Techniques from the Trenches"
+date: 2026-01-15
 categories: [API Security, Web Security]
 tags: [api-security, owasp, oauth, bola, ssrf, mass-assignment, certification]
-excerpt: "A modular study guide to API and web application security — OWASP API Top 10, OAuth, business-logic flaws, and the certification tracks that prove you can break them."
+excerpt: "A modular study guide to API and web application security, OWASP API Top 10, OAuth, business-logic flaws, and the certification tracks that prove you can break them."
 ---
 
 <style>
