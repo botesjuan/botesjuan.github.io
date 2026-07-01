@@ -423,8 +423,27 @@ no cloud dependency, no data leakage, full tool execution capability for profess
 <div class="meta">
   <span>Juan Botes — Senior Penetration Tester, Integrity360</span>
   <span>Cape Town, South Africa</span>
-  <span>Published May 2026 · Updated June 2026</span>
-  <span>Status: Phases 01–07 live · Agent mode end-to-end</span>
+  <span>Published May 2026 · Updated July 2026</span>
+  <span>Status: Phases 01–07 live · Agent mode end-to-end · CLI binary live</span>
+</div>
+
+<div class="callout improvement">
+  <div class="callout-label">💡 July 2026 update — async loop, no more web timeouts, and a real CLI binary</div>
+  Three things landed this round. First, the "web times out on long loops" problem from the previous
+  update turned out to have a boring, concrete root cause — not the agent, not the model, but
+  <strong style="color:#fff">PHP's own <code>max_execution_time</code></strong> silently killing the
+  request before the orchestrator's own timeout ever got a chance. The fix was a genuine architecture
+  change: the orchestrator now answers <code>POST /run</code> immediately with a <code>run_id</code> and
+  the client polls <code>GET /run/&lt;run_id&gt;</code> for progress and the final result, instead of one
+  request blocking for the whole run. Second, <strong style="color:#fff"><code>llmctl</code></strong> — a
+  small static Go binary — is now the real, working version of the "Private CLI Agent" deliverable from
+  the original goal list: it authenticates with a <strong style="color:#fff">per-user API bearer token</strong>
+  (issued/rotated by an admin) instead of a browser session, and talks to the same public
+  <code>llm_api.php</code> the web portal uses. Third, a candidate replacement model
+  (<code>qwen3-14b-abliterated</code>) was A/B tested against the current default and
+  <strong style="color:#fff">rejected</strong> — it fabricated confident, false answers in exactly the
+  scenario this project already had a standing caveat about. <code>hermes3:8b</code> stays the default.
+  Details in the updated §05, §08, and a new §09 sub-section below.
 </div>
 
 <div class="callout improvement">
@@ -475,11 +494,12 @@ with a private LLM as the backend. Zero API costs. Zero data leaving the network
   <div class="node" style="border-color:rgba(0,255,136,0.3);">
     <div class="node-label" style="color:var(--green)">Public Internet</div>
     <div class="node-name">groupservice.co.za</div>
-    <div class="node-detail">HTTPS · Let's Encrypt SSL · MFA-enabled web portal</div>
+    <div class="node-detail">HTTPS · Let's Encrypt SSL · MFA-enabled web portal · token-authed CLI endpoint</div>
     <div style="margin-top:10px">
       <span class="node-badge badge-green">Private chat UI</span>
       <span class="node-badge badge-green">Audit log</span>
       <span class="node-badge badge-amber">MFA</span>
+      <span class="node-badge badge-cyan">llmctl (Bearer token)</span>
     </div>
   </div>
 
@@ -527,13 +547,17 @@ with a private LLM as the backend. Zero API costs. Zero data leaving the network
   </div>
 </div>
 
-<p>Two ways in, one brain. The <strong style="color:#fff">public web UI</strong> (over HTTPS, behind
-auth/MFA) now has an <strong style="color:#fff">Agent mode</strong> toggle: off = plain private chat,
+<p>Three ways in, one brain. The <strong style="color:#fff">public web UI</strong> (over HTTPS, behind
+auth/MFA) has an <strong style="color:#fff">Agent mode</strong> toggle: off = plain private chat,
 on = the request is handed to a LAN-only <strong style="color:#fff">Orchestrator API</strong> that runs
 the ReAct loop and executes real pentest tools inside a Docker sandbox. The same agent code is also
-driven directly from a <strong style="color:#fff">terminal CLI</strong> on the workstation. The model
-never touches the internet directly — every public hop terminates SSL and authenticates at the Pi
-before anything reaches the GPU node, which is firewalled to the LAN.</p>
+driven directly from a <strong style="color:#fff">terminal CLI</strong> on the z490 workstation itself.
+And now there's a third path for remote terminal access: <strong style="color:#fff"><code>llmctl</code></strong>,
+a small Go binary that authenticates with a <strong style="color:#fff">per-user API bearer token</strong>
+and calls the exact same public <code>llm_api.php</code> endpoint the browser uses — no session, no MFA
+prompt, just a token an admin issued. The model never touches the internet directly — every public hop
+terminates SSL and authenticates at the Pi before anything reaches the GPU node, which is firewalled to
+the LAN.</p>
 
 <h2><span class="num">03 //</span> Hardware</h2>
 
@@ -626,11 +650,12 @@ before anything reaches the GPU node, which is firewalled to the LAN.</p>
 <div class="code-block" data-lang="stack">
 <code><span class="c-green">Host</span>         Raspberry Pi 4 (headless)
 <span class="c-green">Web Server</span>   nginx / Apache · public CA wildcard SSL
-<span class="c-green">Auth</span>         session + CSRF · MFA enabled
-<span class="c-green">App</span>          llm_prompt.php  →  llm_api.php  (Agent-mode aware)
-<span class="c-green">Agent path</span>    Agent mode ON → POST orchestrator :8090 (X-API-Key)
+<span class="c-green">Browser auth</span> session + CSRF · MFA enabled
+<span class="c-green">CLI auth</span>     <code>Authorization: Bearer &lt;token&gt;</code> · per-user, admin-issued, argon2id-hashed
+<span class="c-green">App</span>          llm_prompt.php / llmctl  →  llm_api.php  (Agent-mode aware, both auth paths converge here)
+<span class="c-green">Agent path</span>    Agent mode ON → POST orchestrator <code>/run</code> (X-API-Key) → server-side poll <code>/run/&lt;id&gt;</code> → one final reply
 <span class="c-green">Chat path</span>     Agent mode OFF → proxy to Ollama /api/chat
-<span class="c-green">Audit Log</span>    server-side prompt + tool-execution audit log
+<span class="c-green">Audit Log</span>    server-side prompt + tool-execution audit log (session logins and token calls both logged)
 <span class="c-green">Email</span>        Postfix (groupservice.co.za MX)
 <span class="c-green">SIEM</span>         Custom dashboard (self-hosted)</code>
 </div>
@@ -719,6 +744,14 @@ before anything reaches the GPU node, which is firewalled to the LAN.</p>
     <span class="status done">✓ DONE</span>
   </div>
   <div class="goal">
+    <div class="goal-num">08c</div>
+    <div class="goal-text">
+      <strong>Async agent loop — no more web timeouts</strong>
+      <span>Root cause was PHP's <code>max_execution_time</code>, not the orchestrator · <code>POST /run</code> → <code>run_id</code> → poll <code>/run/&lt;id&gt;</code> · step-budget prompt reminder · normalized command dedup</span>
+    </div>
+    <span class="status done">✓ DONE</span>
+  </div>
+  <div class="goal">
     <div class="goal-num">09</div>
     <div class="goal-text">
       <strong>Web portal — multiple persistent conversations</strong>
@@ -741,6 +774,14 @@ before anything reaches the GPU node, which is firewalled to the LAN.</p>
       <span>Self-service request → admin approval → MFA enrol · default-deny · Agent mode admin-only at first</span>
     </div>
     <span class="status future">◈ FUTURE</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">09d</div>
+    <div class="goal-text">
+      <strong>Private CLI Agent binary — <code>llmctl</code></strong>
+      <span>Static Go binary · per-user API bearer token (admin-issued, argon2id-hashed, additive to session/MFA auth) · tested end-to-end against production</span>
+    </div>
+    <span class="status done">✓ DONE</span>
   </div>
   <div class="goal">
     <div class="goal-num">10</div>
@@ -878,6 +919,18 @@ function-calling and instruction-following, steerable, and it runs 100% on the G
 </ul>
 <p>Switching models is a single environment variable — useful for matching the model to the task.</p>
 
+<div class="callout">
+  <div class="callout-label">⚠ Candidate rejected — qwen3-14b-abliterated</div>
+  Qwen3 has a strong general reputation for tool-calling reliability, so an abliterated (uncensored)
+  14B build was A/B tested against <code>hermes3:8b</code> on this project's own test prompts. Rejected:
+  it fabricated a complete fake HTML page as its "Final Answer" <em>before</em> the real command even
+  ran, and separately claimed an API endpoint was "found" when its own tool log showed nothing but
+  403/404 errors — the exact fabrication failure mode already documented above for
+  <code>llama3.1:8b</code>, on top of running 5–17x slower. Benchmark reputation is a starting point,
+  not a substitute for testing a candidate model against your actual agent prompts and actually reading
+  its tool logs against its claims.
+</div>
+
 <h3>API Security — done</h3>
 <p>The new Orchestrator API requires an <code>X-API-Key</code> header (a per-host shared secret) on top of
 the LAN-only firewall rule, so even an internal caller needs the key. The public path adds nothing the
@@ -894,12 +947,22 @@ without re-downloading models or losing ChromaDB) remains on the list, as does a
 that strips client PII before any prompt reaches the backend — a prerequisite before this touches real
 engagement data, and aligned with POPIA obligations.</p>
 
-<h3>Open problem — streaming long agent runs</h3>
-<p>One honest limitation: a single-command prompt returns fine, but a broad <em>investigative</em> prompt
-makes the agent loop over many tools, and the current web path is fully synchronous with no streaming —
-so long loops blow the HTTP timeout and the browser user gets nothing (the CLI completes fine). The fix is
-an async job model (<code>/run</code> → <code>job_id</code> → poll <code>/status</code>) or SSE streaming,
-so the operator sees each Thought / Action / Observation live. That's the next build target.</p>
+<h3>Resolved — the "long runs time out on the web" bug had a boring root cause</h3>
+<p>The previous edition of this post treated this as an open architecture question — async job model vs.
+SSE streaming. Digging into it properly turned up something much more mundane: the orchestrator's own
+<code>TIME_BUDGET</code> was never the actual limit. <strong style="color:#fff">PHP's
+<code>max_execution_time</code></strong> (30 seconds, untouched in <code>php.ini</code>) was silently
+killing the request first, every time, regardless of how generous the orchestrator's own timeout was
+configured to be. No amount of orchestrator tuning could have fixed a PHP-layer ceiling.</p>
+<p>The actual fix was the submit-then-poll model after all — but for a better reason than "add streaming":
+<code>POST /run</code> now returns a <code>run_id</code> immediately, the agent keeps running in a
+background thread, and <code>GET /run/&lt;run_id&gt;</code> reports live <code>step</code>/<code>tool_execs</code>
+progress until the result is ready. <code>llm_api.php</code> polls that server-side (with
+<code>set_time_limit()</code> now explicitly raised to match) and returns one final answer to the
+browser or CLI — hiding the polling from the client entirely. One more subtlety surfaced during testing:
+Apache's own <code>Timeout</code> directive (300s) is a <em>second</em>, independent ceiling above PHP's,
+so the orchestrator's timeout was tuned down to stay safely under it rather than past it. The lesson:
+when something "just times out," check every layer in the request path, not just the one you built.</p>
 
 <h2><span class="num">09 //</span> Latest Iteration — Memory, a Loop That Always Answers, &amp; Conversations</h2>
 
@@ -947,6 +1010,24 @@ argument list — <em>never</em> through a real shell. So a chain like <code>wha
 curl evil.com</code> is still blocked in full. This is a good example of a security decision that follows the
 <strong style="color:#fff">trust boundary</strong>: when the principal is trusted and vetted, you can trade
 some friction for usability — without giving up the structural controls.</p>
+
+<h3>A real CLI binary — <code>llmctl</code>, with per-user API tokens</h3>
+<p>The original goal list promised a "Private CLI Agent — a terminal client that connects to the private
+LLM backend." Until now that existed only as a Python invocation of <code>agent.py</code> run directly on
+the z490 workstation — useful for me, but not something that talks to the public API the way the web
+portal does. <code>llmctl</code> closes that gap: a small, dependency-free <strong style="color:#fff">static
+Go binary</strong> that copies to any Linux box and calls <code>llm_api.php</code> over HTTPS exactly the
+way the browser does, just with a different credential.</p>
+<p>Session cookies and CSRF tokens don't make sense for a CLI, so it authenticates with a
+<strong style="color:#fff">per-user API bearer token</strong> instead — a new, <em>additive</em> auth
+path in <code>llm_api.php</code> that sits alongside session login rather than replacing it. An admin
+generates (or rotates, or revokes) a token per user from the existing admin portal; the token is shown
+once and stored only as an <code>argon2id</code> hash, reusing the same per-user settings store, the same
+<code>agent_mode</code>/enabled checks, and the same audit log the browser path already had. Browser MFA
+and session logic were not touched. Config lives in <code>~/.config/llmctl/config.json</code> (mode
+<code>0600</code>) or two environment variables, and — because <code>llm_api.php</code> now hides the
+orchestrator's submit/poll cycle from the client — a single <code>llmctl "prompt"</code> call is one
+request in, one final answer out, however long the agent actually takes to think.</p>
 
 <div class="callout">
   <div class="callout-label">🔭 Next: a vetted user-registration phase (designed, not built)</div>
@@ -997,7 +1078,7 @@ some friction for usability — without giving up the structural controls.</p>
 
 <ol>
   <li><strong style="color:#fff">Train the engagement-type specialist models</strong> — fine-tune purpose-built web/API and infra/AD brains with open tool calling on the RTX 4060 Ti (see <a href="#specialist-model-training">Section 12 — Specialist Model Training</a>); currently expanding the training datasets and preparing the first QLoRA runs.</li>
-  <li>Move long agent runs to an async/streaming model so investigative loops show live progress (the loop already always returns a final summary — this is about live feedback).</li>
+  <li>Verify the new token generate/rotate/revoke buttons in the admin portal end-to-end in a real browser/MFA session (only function-level tested so far), and exercise Agent mode through <code>llmctl</code> once a non-admin user has it enabled.</li>
   <li>Ingest real pentest notes, CVE feeds, and past engagement reports into the long-term memory tier so recall draws on actual knowledge.</li>
   <li>Build the vetted new-user registration &amp; approval flow — request → admin approval → MFA enrol, default-deny, Agent mode admin-only at first.</li>
   <li>Upgrade the web frontend with file + image upload and image-to-text via a multimodal endpoint.</li>
@@ -1008,8 +1089,9 @@ some friction for usability — without giving up the structural controls.</p>
 
 <p><strong style="color:#fff">Already shipped since launch:</strong> end-to-end Agent mode, the dynamic
 <code>execute_command</code> tool with allowlist + egress guardrails, two-tier ChromaDB memory, a loop that
-always returns a structured answer, safe <code>&amp;&amp;</code> tool-sequencing, and multi-conversation
-persistence in the portal.</p>
+always returns a structured answer, safe <code>&amp;&amp;</code> tool-sequencing, multi-conversation
+persistence in the portal, an async submit-then-poll agent loop that fixed the real (PHP-layer) cause of
+web timeouts, and the <code>llmctl</code> CLI binary with per-user API token authentication.</p>
 
 <h2 id="specialist-model-training"><span class="num">12 //</span> Specialist Model Training — Engagement-Type Fine-Tuned Tool Calling</h2>
 
@@ -1265,7 +1347,12 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
 
   <div class="gloss">
     <div class="term">Token</div>
-    <div class="def">The small chunks of text a model reads and writes — roughly a word or part of a word. Models measure everything (input length, output length, cost) in tokens, not characters.</div>
+    <div class="def">The small chunks of text a model reads and writes — roughly a word or part of a word. Models measure everything (input length, output length, cost) in tokens, not characters. <strong style="color:#fff">Not to be confused</strong> with the API/Bearer token below — same word, an unrelated concept from web authentication.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">API token <span class="alt">bearer token</span></div>
+    <div class="def">A secret string a client sends with each request (typically an <code>Authorization: Bearer &lt;token&gt;</code> header) to prove who it is, instead of a browser session cookie. This project issues one per user — hashed and stored server-side, shown to the admin only once at creation — so <code>llmctl</code> can authenticate from a terminal without ever doing a browser login or MFA prompt.</div>
   </div>
 
   <div class="gloss">
