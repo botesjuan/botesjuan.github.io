@@ -667,7 +667,7 @@ the LAN.</p>
     <div class="goal-num">01</div>
     <div class="goal-text">
       <strong>Hardware migration</strong>
-      <span>Removed iomemory cards · Installed RTX 4060 Ti · Swapped GT 960 to desktop</span>
+      <span>Hardware build setup · Installed RTX 4060 Ti · Motherboard 64GB memory installed</span>
     </div>
     <span class="status done">✓ DONE</span>
   </div>
@@ -675,7 +675,7 @@ the LAN.</p>
     <div class="goal-num">02</div>
     <div class="goal-text">
       <strong>Ubuntu Server 24.04 LTS install</strong>
-      <span>Wiped Proxmox LVM · Clean headless install · SSH key auth · Static IP</span>
+      <span>Prepared Backend stack · Clean headless install · SSH key auth · Static IP</span>
     </div>
     <span class="status done">✓ DONE</span>
   </div>
@@ -699,9 +699,9 @@ the LAN.</p>
     <div class="goal-num">05</div>
     <div class="goal-text">
       <strong>Pentest tool suite</strong>
-      <span>nmap · nuclei · ffuf · amass · subfinder · httpx · Docker-sandboxed</span>
+      <span>nmap · nuclei · ffuf · amass · subfinder · whatweb · gobuster · sslscan · Docker-sandboxed tools</span>
     </div>
-    <span class="status done">✓ DONE</span>
+    <span class="status active">▷ IN PROGRESS</span>
   </div>
   <div class="goal">
     <div class="goal-num">06</div>
@@ -760,6 +760,14 @@ the LAN.</p>
     <span class="status done">✓ DONE</span>
   </div>
   <div class="goal">
+    <div class="goal-num">09d</div>
+    <div class="goal-text">
+      <strong>Private CLI Agent binary — <code>llmctl</code></strong>
+      <span>Static Go binary · per-user API bearer token (admin-issued, argon2id-hashed, additive to session/MFA auth) · tested end-to-end against production</span>
+    </div>
+    <span class="status active">▷ IN PROGRESS</span>
+  </div>
+  <div class="goal">
     <div class="goal-num">09b</div>
     <div class="goal-text">
       <strong>Web frontend upgrade — file + image upload</strong>
@@ -774,15 +782,7 @@ the LAN.</p>
       <span>Self-service request → admin approval → MFA enrol · default-deny · Agent mode admin-only at first</span>
     </div>
     <span class="status future">◈ FUTURE</span>
-  </div>
-  <div class="goal">
-    <div class="goal-num">09d</div>
-    <div class="goal-text">
-      <strong>Private CLI Agent binary — <code>llmctl</code></strong>
-      <span>Static Go binary · per-user API bearer token (admin-issued, argon2id-hashed, additive to session/MFA auth) · tested end-to-end against production</span>
-    </div>
-    <span class="status done">✓ DONE</span>
-  </div>
+  </div>  
   <div class="goal">
     <div class="goal-num">10</div>
     <div class="goal-text">
@@ -813,7 +813,7 @@ the LAN.</p>
       <strong>Specialist model training — engagement-type fine-tuned tool calling</strong>
       <span>Per-engagement specialists (web/API · internal/AD) · QLoRA on the RTX 4060 Ti · two generic shell primitives, no hard-coded tool list · routed by engagement type in the orchestrator</span>
     </div>
-    <span class="status active">▷ IN PROGRESS</span>
+    <span class="status future">◈ FUTURE</span>
   </div>
 </div>
 
@@ -1074,7 +1074,7 @@ request in, one final answer out, however long the agent actually takes to think
   what to call and how to call it.
 </div>
 
-<h2><span class="num">11 //</span> Next Steps</h2>
+<h2><span class="num">11 //</span> Future Planned Steps</h2>
 
 <ol>
   <li><strong style="color:#fff">Train the engagement-type specialist models</strong> — fine-tune purpose-built web/API and infra/AD brains with open tool calling on the RTX 4060 Ti (see <a href="#specialist-model-training">Section 12 — Specialist Model Training</a>); currently expanding the training datasets and preparing the first QLoRA runs.</li>

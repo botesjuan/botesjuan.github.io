@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Being a Unicorn with CISSP as a Penetration Tester"
-date: 2024-10-0
+date: 2024-10-01
 categories: [Certification, GRC]
 tags: [cissp, certification, risk-management, security-governance, study-notes]
 excerpt: "How a hands-on penetration tester thinks like a manager long enough to pass the CISSP, the eight security domains, the art of the distractor, and a public set of study notes with the of AI LLM study partner prompts."
