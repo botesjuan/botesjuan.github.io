@@ -424,7 +424,28 @@ no cloud dependency, no data leakage, full tool execution capability for profess
   <span>Juan Botes — Senior Penetration Tester, Integrity360</span>
   <span>Cape Town, South Africa</span>
   <span>Published May 2026 · Updated July 2026</span>
-  <span>Status: Phases 01–07 live · Agent mode end-to-end · CLI binary live</span>
+  <span>Status: Phases 01–07 live · Agent mode end-to-end · CLI binary live · llmctl local exec live</span>
+</div>
+
+<div class="callout improvement">
+  <div class="callout-label">💡 July 2026 update, part 2 — llmctl runs tools on YOUR host now, not just the sandbox</div>
+  <code>llmctl</code> gained a second execution mode: <code>llmctl chat</code>. The existing
+  <code>llmctl ask --agent</code> path still routes through the server-side Docker-sandboxed
+  orchestrator described below — but that sandbox only ships a handful of recon tools, not the
+  real Kali toolkit (Burp, <code>nxc</code>, <code>certipy-ad</code>, <code>bloodyAD</code>,
+  <code>evil-winrm</code>, <code>kerbrute</code>, impacket, <code>responder</code>,
+  <code>hashcat</code>…). <code>llmctl chat</code> closes that gap: a new stepwise planner on the
+  GPU node proposes <strong style="color:#fff">one command at a time</strong> and hands control
+  back — nothing executes until <strong style="color:#fff">I explicitly approve it</strong>, then
+  it runs for real on my own Kali workstation and the actual output feeds back as the next
+  observation. Also new: multi-turn context across a session, <code>--encrypt</code>ed local
+  history (AES-256-GCM + Argon2id), named config profiles per engagement, session resume, and a
+  CLAUDE.md-format <code>logs/&lt;Client&gt;_Commands.log</code> written automatically. A live
+  test — "POST this text to my webhook capture host" — round-tripped end-to-end and showed up on
+  the dashboard. One real bug caught along the way: the confirm prompt's fallback case treated a
+  closed/empty input stream as an implicit "yes" — exactly the failure mode a
+  <strong style="color:#fff">confirm-every-command</strong> design is supposed to prevent. Fixed to
+  fail closed. Full write-up in the new §09e below.
 </div>
 
 <div class="callout improvement">
@@ -558,6 +579,11 @@ and calls the exact same public <code>llm_api.php</code> endpoint the browser us
 prompt, just a token an admin issued. The model never touches the internet directly — every public hop
 terminates SSL and authenticates at the Pi before anything reaches the GPU node, which is firewalled to
 the LAN.</p>
+
+<p><code>llmctl</code> now speaks two different execution models through that same endpoint, and the
+distinction matters: <code>llmctl ask --agent</code> still means <em>the GPU node's Docker sandbox runs
+the tool</em>, while <code>llmctl chat</code> means <em>my own Kali workstation runs the tool, after I
+say yes</em>. Same token, same public API, two very different trust boundaries — see §09e.</p>
 
 <h2><span class="num">03 //</span> Hardware</h2>
 
@@ -765,7 +791,15 @@ the LAN.</p>
       <strong>Private CLI Agent binary — <code>llmctl</code></strong>
       <span>Static Go binary · per-user API bearer token (admin-issued, argon2id-hashed, additive to session/MFA auth) · tested end-to-end against production</span>
     </div>
-    <span class="status active">▷ IN PROGRESS</span>
+    <span class="status done">✓ DONE</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">09e</div>
+    <div class="goal-text">
+      <strong>llmctl chat — local plan/act/observe loop</strong>
+      <span>New stepwise planner (no Docker) proposes one command at a time · operator approves before it runs on their own host · multi-turn context · encrypted history · profiles · resume · CLAUDE.md commands log · validated against a live webhook</span>
+    </div>
+    <span class="status done">✓ DONE</span>
   </div>
   <div class="goal">
     <div class="goal-num">09b</div>
@@ -1029,6 +1063,75 @@ and session logic were not touched. Config lives in <code>~/.config/llmctl/confi
 orchestrator's submit/poll cycle from the client — a single <code>llmctl "prompt"</code> call is one
 request in, one final answer out, however long the agent actually takes to think.</p>
 
+<h3 id="09e">09e — <code>llmctl chat</code>: a second execution path, on purpose</h3>
+
+<p>The Docker sandbox that backs <code>llmctl ask --agent</code> is deliberately minimal — <code>ffuf</code>,
+<code>gobuster</code>, <code>nmap</code>, <code>nuclei</code>, <code>whatweb</code>, <code>sslscan</code>,
+<code>curl</code>/<code>wget</code>, a handful of others. It does not, and should not, bundle Burp,
+<code>nxc</code>, <code>certipy-ad</code>, <code>bloodyAD</code>, <code>evil-winrm</code>,
+<code>kerbrute</code>, impacket, <code>responder</code>, or <code>hashcat</code> — the real toolkit an
+engagement actually needs lives on my own Kali workstation, not in a throwaway container. So rather than
+grow the sandbox image indefinitely, <code>llmctl</code> gained a second, distinct execution model: the
+model still reasons and proposes commands, but <em>my own host</em> runs them, and only after I say so.</p>
+
+<div class="code-block" data-lang="flow">
+<code><span class="c-green">llmctl chat</span> (your terminal)
+  │  POST /client_agent=start {task}   (Bearer token → llm_api.php → X-API-Key → orchestrator)
+  ▼
+<span class="c-cyan">client_agent.py  (stepwise planner — no Docker, no execute_command)</span>
+  │   proposes ONE command, then STOPS and hands control back
+  │   defence-in-depth only: reuses tools.py's destructive-denylist + scope.yaml
+  │   (out-of-scope / destructive proposals are auto-blocked before you ever see them)
+  ▼
+<span class="c-amber">you</span>  ── Run it? [y]es / [n]o / [e]dit / [a]bort ──
+  │   only an explicit y/yes runs anything; blank/EOF/anything else declines (fail-closed)
+  ▼
+<span class="c-green">bash -c &lt;command&gt;</span>  on YOUR host — real toolkit, real network access
+  │   output streams live to your terminal AND is captured
+  ▼
+POST /client_agent=step {session_id, observation}
+  │   loop continues — multi-turn context carries across REPL lines, '/new' resets it
+  └─ until Final Answer → written to ./llmctl-sessions/*.json (optionally --encrypt'd)
+                        → and logs/&lt;Client&gt;_Commands.log in CLAUDE.md evidence format</code>
+</div>
+
+<p>The trust model is the opposite of the sandbox path on purpose. There is no container here — the
+operator's own explicit approval of <strong style="color:#fff">every single command</strong> is the
+control, the same way Claude Code itself asks before running a tool. The destructive-command denylist
+and <code>scope.yaml</code> egress check from §07 are still applied automatically before a proposal ever
+reaches me, as defence-in-depth, but they're a backstop — not the primary gate.</p>
+
+<div class="callout">
+  <div class="callout-label">⚠ Bug caught during validation — "no input" silently meant "yes"</div>
+  The confirm prompt's original fallback (<code>switch</code> <code>default:</code>) treated anything
+  that wasn't explicitly <code>n</code>/<code>e</code>/<code>a</code> as approval to run — including a
+  closed or exhausted input stream. A test run where piped input ran dry mid-loop proved it: the CLI kept
+  auto-running whatever the model proposed next. That's exactly the failure mode a
+  <strong style="color:#fff">confirm-every-command</strong> design exists to prevent. Fixed so only an
+  explicit <code>y</code>/<code>yes</code> runs anything, and a read error now aborts the turn instead of
+  falling through. <strong style="color:#fff">Lesson:</strong> a confirmation gate has to fail closed on
+  <em>ambiguous or absent</em> input, not just on an explicit "no" — the same discipline as the egress
+  allowlist in §07, just at the human-approval layer instead of the network layer.
+</div>
+
+<p>Everything else that shipped alongside it is smaller but adds up day to day: named
+<strong style="color:#fff">config profiles</strong> per engagement instead of one global token,
+<strong style="color:#fff">session resume</strong> (<code>--resume latest</code> picks up the newest local
+history file), <strong style="color:#fff">encrypted-at-rest history</strong> (AES-256-GCM keyed by an
+Argon2id-derived passphrase — session files can contain live findings and creds, so they don't sit on
+disk in plaintext by default when that matters), and an automatic
+<strong style="color:#fff">CLAUDE.md-format commands log</strong> so every command actually run is
+already in <code>logs/&lt;Client&gt;_Commands.log</code> without me transcribing it by hand afterwards.</p>
+
+<p><strong style="color:#fff">Validated live:</strong> "create a webhook POST request with this text as
+the body, to my OOB capture host" ran exactly as designed — the model wrote the <code>curl</code>
+command, I approved it, it executed on my real workstation, and the request landed on
+<code>webhook_dashboard.php</code>. That specific host (<code>hoster.groupservice.co.za</code>) had to be
+added to <code>scope.yaml</code> first — it's excluded by default (see §07's exact-host-match rule), so
+proving this out was also, incidentally, a live re-confirmation that the scope guard still does its job:
+the same prompt against a host <em>not</em> in <code>scope.yaml</code> is auto-blocked before it ever
+reaches the confirm prompt.</p>
+
 <div class="callout">
   <div class="callout-label">🔭 Next: a vetted user-registration phase (designed, not built)</div>
   Today the portal is single-operator. The next milestone is letting others <em>request</em> access while
@@ -1078,7 +1181,8 @@ request in, one final answer out, however long the agent actually takes to think
 
 <ol>
   <li><strong style="color:#fff">Train the engagement-type specialist models</strong> — fine-tune purpose-built web/API and infra/AD brains with open tool calling on the RTX 4060 Ti (see <a href="#specialist-model-training">Section 12 — Specialist Model Training</a>); currently expanding the training datasets and preparing the first QLoRA runs.</li>
-  <li>Verify the new token generate/rotate/revoke buttons in the admin portal end-to-end in a real browser/MFA session (only function-level tested so far), and exercise Agent mode through <code>llmctl</code> once a non-admin user has it enabled.</li>
+  <li>Verify the new token generate/rotate/revoke buttons in the admin portal end-to-end in a real browser/MFA session (only function-level tested so far).</li>
+  <li>Give <code>llmctl chat</code>'s client-side proposals the same allowlist/deny-flags granularity <code>tools.yaml</code> already gives the sandbox path — today it leans on operator confirmation plus the destructive-denylist/scope backstop, which is intentional but worth tightening further.</li>
   <li>Ingest real pentest notes, CVE feeds, and past engagement reports into the long-term memory tier so recall draws on actual knowledge.</li>
   <li>Build the vetted new-user registration &amp; approval flow — request → admin approval → MFA enrol, default-deny, Agent mode admin-only at first.</li>
   <li>Upgrade the web frontend with file + image upload and image-to-text via a multimodal endpoint.</li>
@@ -1091,7 +1195,10 @@ request in, one final answer out, however long the agent actually takes to think
 <code>execute_command</code> tool with allowlist + egress guardrails, two-tier ChromaDB memory, a loop that
 always returns a structured answer, safe <code>&amp;&amp;</code> tool-sequencing, multi-conversation
 persistence in the portal, an async submit-then-poll agent loop that fixed the real (PHP-layer) cause of
-web timeouts, and the <code>llmctl</code> CLI binary with per-user API token authentication.</p>
+web timeouts, the <code>llmctl</code> CLI binary with per-user API token authentication, and — most
+recently — <code>llmctl chat</code>'s local plan/act/observe loop with per-command operator confirmation,
+multi-turn context, encrypted history, config profiles, session resume, and automatic CLAUDE.md-format
+command logging, validated end-to-end against a live webhook.</p>
 
 <h2 id="specialist-model-training"><span class="num">12 //</span> Specialist Model Training — Engagement-Type Fine-Tuned Tool Calling</h2>
 
