@@ -421,7 +421,7 @@ excerpt: "How I am building a fully offline LLM assistant for penetration testin
 no cloud dependency, no data leakage, full tool execution capability for professional penetration testing engagements.</p>
 
 <div class="meta">
-  <span>Juan Botes — Senior Penetration Tester, Integrity360</span>
+  <span>Juan Botes — Senior Penetration Tester</span>
   <span>Cape Town, South Africa</span>
   <span>Published May 2026 · Updated July 2026</span>
   <span>Status: Phases 01–07 live · Agent mode end-to-end · CLI binary live · llmctl local exec live</span>
