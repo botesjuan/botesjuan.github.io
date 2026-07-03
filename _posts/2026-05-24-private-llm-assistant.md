@@ -1433,8 +1433,6 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
     <div class="def">Software that performs tasks we'd normally call "intelligent", recognising images, understanding language, making decisions. A broad umbrella term; everything you see here is a specific piece of it. (ML) Machine learning analyzes patterns, AI makes decisions, and automation executes responses. In the context of a SOC, AI differs from traditional automation because AI assists in decision-making and can generate content.</div>
   </div>
 
-<img src="/images/generative_AI.png" width=240>  
-
   <div class="gloss">
     <div class="term">LLM <span class="alt">large language model</span></div>
     <div class="def">A type of AI trained on enormous amounts of text that predicts the next words in a sequence. That simple idea, at huge scale, lets it answer questions, write code, and follow instructions. ChatGPT, Claude, and the local models in this project are all LLMs.</div>
@@ -1661,6 +1659,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
     <a href="https://www.groupservice.co.za/llm_prompt.php" target="_blank">groupservice.co.za/llm_prompt.php</a>
   </div>
   <div>Juan Botes · OSCP · CISSP · BSCP · CEH · HTB CPTS · CRTO</div>
+  <img src="/images/generative_AI.png" width=240>  
 </div>
 
 </div>
