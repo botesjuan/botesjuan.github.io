@@ -1417,10 +1417,23 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
 
 <div class="glossary">
 
+
+  <div class="gloss">
+    <div class="term">Automation <span class="alt">Automation</span></div>
+    <div class="def">Executes predefined actions, follows explicit instructions and predictable and repeatable. Automation typically functions within cybersecurity processes by executing predefined actions without learning or reasoning.</div>
+  </div>
+  
+    <div class="gloss">
+    <div class="term">Machine Learning<span class="alt">machine learning</span></div>
+    <div class="def">Algorithms trained to make decisions or predictions without explicit programming. Supervised learning using labeled data and unsupervised learning using algorithm finding patterns in unlabeled data. Reinforcement learning trial and error with reward. The role of machine learning in identifying threats in a SOC is that it examines data to find patterns indicative of threats. An example of unsupervised learning in machine learning is Detecting outliers in network traffic without predefined labels.</div>
+  </div>
+  
   <div class="gloss">
     <div class="term">AI <span class="alt">artificial intelligence</span></div>
-    <div class="def">Software that performs tasks we'd normally call "intelligent" — recognising images, understanding language, making decisions. A broad umbrella term; everything below is a specific piece of it.</div>
+    <div class="def">Software that performs tasks we'd normally call "intelligent", recognising images, understanding language, making decisions. A broad umbrella term; everything you see here is a specific piece of it. (ML) Machine learning analyzes patterns, AI makes decisions, and automation executes responses. In the context of a SOC, AI differs from traditional automation because AI assists in decision-making and can generate content.</div>
   </div>
+
+<img src="/images/generative_AI.png" width=240>  
 
   <div class="gloss">
     <div class="term">LLM <span class="alt">large language model</span></div>
@@ -1609,12 +1622,32 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
 
   <div class="gloss">
     <div class="term">Persona</div>
-    <div class="def">The "character" an LLM is told to adopt — its role, tone, rules, and what it will or won't do — set mainly through its system prompt. This assistant's persona is a focused, no-lecture penetration-testing helper. Different users could be given different personas (and different limits) by the admin.</div>
+    <div class="def">The "character" an LLM is told to adopt — its role, tone, rules, and what it will or won't do set mainly through its system prompt. This assistant's persona is a focused, no-lecture penetration-testing helper. Different users could be given different personas (and different limits) by the admin.</div>
   </div>
 
   <div class="gloss">
     <div class="term">Human-in-the-loop</div>
     <div class="def">A design where a person must review or approve a step before it takes effect, rather than letting the system act fully autonomously. It trades some speed for control and accountability. Examples here: the planned <em>admin approval</em> of every new account before it works, and keeping high-impact "Agent mode" gated to a trusted operator.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Blind AI execution</div>
+    <div class="def">The practice of taking an AI/LLM-generated output command, code snippet, API call, tool invocation, or decision and executing or applying it automatically, without a human or an independent control layer reviewing it first. The risk is not that AI output is inherently wrong; it's that the system acts on it before anything checks whether it's safe, correct, or in-scope. This is closely related to the OWASP LLM Top 10 category of <em>Excessive Agency</em> where an LLM-based system has more autonomy to take real-world action than its output can be trusted to justify.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Verification of AI outputs</div>
+    <div class="def">Checking that the AI's output is what it claims to be and came from where it should have an integrity check, not a correctness check. This asks: Was this output actually produced by the expected model pipeline? Has it been tampered with in transit? Does it conform to the expected schema, format ,structure and policy? Verification is often mechanical and automatable, schema validation, signature checks, checksum comparisons, confirming the output matches an expected structure, for example, a JSON tool call has the right fields and types before it's parsed further.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Validation of AI generated outputs</div>
+    <div class="def">Checking that the AI's output is correct, safe, and appropriate for the context it's about to be used in, a semantic business-logic check, not just a structural one. This asks: Is this action within policy? Is this code free of vulnerabilities? Is this recommendation factually accurate? Does this output stay within the intended scope and permissions? Validation typically requires more than a schema check, it may involve policy engines, allow-lists, deny-lists, sandboxing before execution, human-in-the-loop review for high-impact actions, or secondary model rule-based review. This is the layer that should catch a <em>prompt-injection</em> induced malicious tool call even if it's perfectly well-formed, for example, passes verification but fails validation.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Validator Function</div>
+    <div class="def">The primary objective of implementing a validator function in AI application code, is to block dangerous AI generated configurations. The action performed by the validator function when it recognizes a dangerous configuration pattern, is to stop the deployment and returns and error message.</div>
   </div>
 
 </div>
