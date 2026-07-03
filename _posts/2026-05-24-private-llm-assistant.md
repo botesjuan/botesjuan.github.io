@@ -1659,7 +1659,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
     <a href="https://www.groupservice.co.za/llm_prompt.php" target="_blank">groupservice.co.za/llm_prompt.php</a>
   </div>
   <div>Juan Botes · OSCP · CISSP · BSCP · CEH · HTB CPTS · CRTO</div>
-  <img src="/images/generative_AI.png" width=240>  
+  <div> <img src="/images/generative_AI.png" width=240>  </div>
 </div>
 
 </div>
