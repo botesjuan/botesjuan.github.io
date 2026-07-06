@@ -427,6 +427,71 @@ no cloud dependency, no data leakage, full tool execution capability for profess
   <span>Status: Phases 01–07 live · Agent mode end-to-end · CLI binary live · llmctl local exec live</span>
 </div>
 
+<div class="callout improvement">
+  <div class="callout-label">💡 July 2026 update, part 2 — llmctl runs tools on YOUR host now, not just the sandbox</div>
+  <code>llmctl</code> gained a second execution mode: <code>llmctl chat</code>. The existing
+  <code>llmctl ask --agent</code> path still routes through the server-side Docker-sandboxed
+  orchestrator described below — but that sandbox only ships a handful of recon tools, not the
+  real Kali toolkit (Burp, <code>nxc</code>, <code>certipy-ad</code>, <code>bloodyAD</code>,
+  <code>evil-winrm</code>, <code>kerbrute</code>, impacket, <code>responder</code>,
+  <code>hashcat</code>…). <code>llmctl chat</code> closes that gap: a new stepwise planner on the
+  GPU node proposes <strong style="color:#fff">one command at a time</strong> and hands control
+  back — nothing executes until <strong style="color:#fff">I explicitly approve it</strong>, then
+  it runs for real on my own Kali workstation and the actual output feeds back as the next
+  observation. Also new: multi-turn context across a session, <code>--encrypt</code>ed local
+  history (AES-256-GCM + Argon2id), named config profiles per engagement, session resume, and a
+  CLAUDE.md-format <code>logs/&lt;Client&gt;_Commands.log</code> written automatically. A live
+  test — "POST this text to my webhook capture host" — round-tripped end-to-end and showed up on
+  the dashboard. One real bug caught along the way: the confirm prompt's fallback case treated a
+  closed/empty input stream as an implicit "yes" — exactly the failure mode a
+  <strong style="color:#fff">confirm-every-command</strong> design is supposed to prevent. Fixed to
+  fail closed. Full write-up in the new §09e below.
+</div>
+
+<div class="callout improvement">
+  <div class="callout-label">💡 July 2026 update — async loop, no more web timeouts, and a real CLI binary</div>
+  Three things landed this round. First, the "web times out on long loops" problem from the previous
+  update turned out to have a boring, concrete root cause — not the agent, not the model, but
+  <strong style="color:#fff">PHP's own <code>max_execution_time</code></strong> silently killing the
+  request before the orchestrator's own timeout ever got a chance. The fix was a genuine architecture
+  change: the orchestrator now answers <code>POST /run</code> immediately with a <code>run_id</code> and
+  the client polls <code>GET /run/&lt;run_id&gt;</code> for progress and the final result, instead of one
+  request blocking for the whole run. Second, <strong style="color:#fff"><code>llmctl</code></strong> — a
+  small static Go binary — is now the real, working version of the "Private CLI Agent" deliverable from
+  the original goal list: it authenticates with a <strong style="color:#fff">per-user API bearer token</strong>
+  (issued/rotated by an admin) instead of a browser session, and talks to the same public
+  <code>llm_api.php</code> the web portal uses. Third, a candidate replacement model
+  (<code>qwen3-14b-abliterated</code>) was A/B tested against the current default and
+  <strong style="color:#fff">rejected</strong> — it fabricated confident, false answers in exactly the
+  scenario this project already had a standing caveat about. <code>hermes3:8b</code> stays the default.
+  Details in the updated §05, §08, and a new §09 sub-section below.
+</div>
+
+<div class="callout improvement">
+  <div class="callout-label">💡 June 2026 update</div>
+  Since the original post the backend is fully operational: the GPU LLM node is serving models,
+  the pentest-tool sandbox is built, and the <strong style="color:#fff">ReAct agent now executes
+  real tools end-to-end</strong> — both from the CLI and from the public web UI via a new
+  <strong style="color:#fff">Agent-mode orchestrator</strong>. Along the way I caught (and fixed)
+  a genuine <strong style="color:#fff">indirect prompt-injection</strong> against my own agent.
+  The new sections below cover the agent design, the guardrails, that injection finding, and a
+  vendor-neutral build summary for anyone researching the same setup.
+</div>
+
+<div class="callout improvement">
+  <div class="callout-label">💡 Latest iteration — robustness, memory &amp; UX</div>
+  The most recent round of work hardened the loop and the experience:
+  <strong style="color:#fff">the agent always returns a structured answer</strong> now (a forced
+  closing summary when it hits a step/time limit, instead of a bare "max steps" error);
+  <strong style="color:#fff">persistent vector memory</strong> (ChromaDB) gives long, complex runs a
+  working memory so they stay within the model's context window without losing earlier findings;
+  the web portal gained <strong style="color:#fff">multiple, persistent conversations</strong> (a
+  ChatGPT-style sidebar); and — because this is a single, authorised operator — I relaxed one guardrail
+  to allow <code>&amp;&amp;</code> tool-sequencing while keeping the no-shell / scope guarantees intact.
+  A future <strong style="color:#fff">vetted user-registration</strong> phase is designed but deliberately
+  not yet built. Details in §08–§09 and the expanded glossary.
+</div>
+
 <h2><span class="num">01 //</span> Project Goal</h2>
 
 <p>The goal is to build a fully private, self-hosted AI security assistant that operates like
@@ -623,38 +688,6 @@ say yes</em>. Same token, same public API, two very different trust boundaries �
 
 <h2><span class="num">05 //</span> Build Goals &amp; Status</h2>
 
-<p>Highlights carried forward from the last few build rounds, folded into the goal list below rather
-than kept as standalone update banners:</p>
-
-<ul>
-  <li>Backend went fully operational — GPU node serving models, pentest-tool sandbox built, and the
-  ReAct agent executing real tools end-to-end from both the CLI and the public web UI via the
-  Agent-mode orchestrator.</li>
-  <li>Caught and fixed a genuine indirect prompt-injection against the agent (a seeded
-  <code>robots.txt</code> instructing an exfil callback) — hardened into a fail-closed
-  <code>scope.yaml</code> egress allowlist (see §07).</li>
-  <li>Loop robustness: the agent always returns a structured answer now (forced closing summary on
-  step/time limits), backed by persistent ChromaDB vector memory so long runs don't overflow context.</li>
-  <li>Web portal gained multiple, persistent conversations (ChatGPT-style sidebar), and — for this
-  single authorised operator — the guardrail was relaxed to allow safe <code>&amp;&amp;</code>
-  tool-sequencing while keeping the no-shell / scope guarantees intact.</li>
-  <li>Root-caused the "web times out on long loops" issue to PHP's own <code>max_execution_time</code>,
-  not the orchestrator — fixed with an async <code>POST /run</code> → <code>run_id</code> → poll
-  <code>/run/&lt;id&gt;</code> flow.</li>
-  <li><code>llmctl</code> shipped as a real static Go binary authenticating with a per-user API bearer
-  token instead of a browser session, talking to the same public <code>llm_api.php</code> the portal uses.</li>
-  <li>A/B tested a candidate replacement model (<code>qwen3-14b-abliterated</code>) and rejected it —
-  it fabricated confident, false answers in a scenario this project already had a standing caveat about.
-  <code>hermes3:8b</code> stays the default.</li>
-  <li><code>llmctl chat</code> added a local plan/act/observe mode: a stepwise planner proposes one
-  command at a time and nothing executes until it's explicitly approved, then it runs for real on the
-  operator's own Kali workstation with the actual output feeding back as the next observation —
-  plus multi-turn context, encrypted local history, named config profiles, session resume, and an
-  automatic CLAUDE.md-format command log. One real bug caught along the way: the confirm prompt's
-  fallback treated a closed/empty input stream as an implicit "yes" — fixed to fail closed (see §09e).</li>
-  <li>A vetted user-registration phase is designed but deliberately not yet built.</li>
-</ul>
-
 <div class="goals">
   <div class="goal">
     <div class="goal-num">01</div>
@@ -721,14 +754,6 @@ than kept as standalone update banners:</p>
     <span class="status done">✓ DONE</span>
   </div>
   <div class="goal">
-    <div class="goal-num">07d</div>
-    <div class="goal-text">
-      <strong>Authorized-engagement system prompt (anti-refusal steering)</strong>
-      <span>Persona prepended in <code>llm_api.php</code> so security-strict models don't refuse authorized pentest prompts · reinforces scope discipline</span>
-    </div>
-    <span class="status done">✓ DONE</span>
-  </div>
-  <div class="goal">
     <div class="goal-num">08</div>
     <div class="goal-text">
       <strong>ChromaDB vector store — two-tier memory</strong>
@@ -761,20 +786,12 @@ than kept as standalone update banners:</p>
     <span class="status done">✓ DONE</span>
   </div>
   <div class="goal">
-    <div class="goal-num">09a</div>
-    <div class="goal-text">
-      <strong>Copy-to-clipboard on assistant responses</strong>
-      <span>Per-response ⧉ Copy button · <code>navigator.clipboard</code> over HTTPS with <code>execCommand</code> fallback · works for server- and JS-rendered messages</span>
-    </div>
-    <span class="status done">✓ DONE</span>
-  </div>
-  <div class="goal">
     <div class="goal-num">09d</div>
     <div class="goal-text">
       <strong>Private CLI Agent binary — <code>llmctl</code></strong>
-      <span>Static Go binary · per-user API bearer token (admin-issued, argon2id-hashed, additive to session/MFA auth) · tested end-to-end against production · now being extended to read local scope/context files from the directory it's executed in, so status stays open until that lands</span>
+      <span>Static Go binary · per-user API bearer token (admin-issued, argon2id-hashed, additive to session/MFA auth) · tested end-to-end against production</span>
     </div>
-    <span class="status active">▷ IN PROGRESS</span>
+    <span class="status done">✓ DONE</span>
   </div>
   <div class="goal">
     <div class="goal-num">09e</div>
@@ -783,22 +800,6 @@ than kept as standalone update banners:</p>
       <span>New stepwise planner (no Docker) proposes one command at a time · operator approves before it runs on their own host · multi-turn context · encrypted history · profiles · resume · CLAUDE.md commands log · validated against a live webhook</span>
     </div>
     <span class="status done">✓ DONE</span>
-  </div>
-  <div class="goal">
-    <div class="goal-num">09f</div>
-    <div class="goal-text">
-      <strong>Dynamic scope update for conversations</strong>
-      <span>Let scope be updated live, per conversation, instead of a static global <code>scope.yaml</code> · reads the local scope/notes context from wherever <code>llmctl</code> is executed, so engagement scope changes mid-session without a restart</span>
-    </div>
-    <span class="status active">▷ IN PROGRESS</span>
-  </div>
-  <div class="goal">
-    <div class="goal-num">09g</div>
-    <div class="goal-text">
-      <strong><code>llmctl /init</code> — ingest local engagement files as context</strong>
-      <span>CLI command reads the <code>.md</code> / <code>.txt</code> / <code>.json</code> files in the folder where the binary runs · seeds scope, notes and target context into the session, Claude-Code-style</span>
-    </div>
-    <span class="status active">▷ IN PROGRESS</span>
   </div>
   <div class="goal">
     <div class="goal-num">09b</div>
@@ -815,15 +816,7 @@ than kept as standalone update banners:</p>
       <span>Self-service request → admin approval → MFA enrol · default-deny · Agent mode admin-only at first</span>
     </div>
     <span class="status future">◈ FUTURE</span>
-  </div>
-  <div class="goal">
-    <div class="goal-num">09h</div>
-    <div class="goal-text">
-      <strong>Admin-set per-user persona / system prompt</strong>
-      <span>Admin portal sets each registered user's system-prompt context and what their assistant will/won't do · per-user data model already in place · admin UI still to build</span>
-    </div>
-    <span class="status future">◈ FUTURE</span>
-  </div>
+  </div>  
   <div class="goal">
     <div class="goal-num">10</div>
     <div class="goal-text">
@@ -835,10 +828,10 @@ than kept as standalone update banners:</p>
   <div class="goal">
     <div class="goal-num">11</div>
     <div class="goal-text">
-      <strong>Function Calling model expansion</strong>
-      <span>Keep A/B testing new function-calling models larger than the current default <code>hermes3:8b</code> · use the motherboard's full 64GB system memory to run future models beyond 14B</span>
+      <strong>Second NVMe storage expansion</strong>
+      <span>Dedicated /models and /data mount · Expand model library beyond 14B</span>
     </div>
-    <span class="status active">▷ IN PROGRESS</span>
+    <span class="status future">◈ FUTURE</span>
   </div>
   <div class="goal">
     <div class="goal-num">12</div>
@@ -855,14 +848,6 @@ than kept as standalone update banners:</p>
       <span>Per-engagement specialists (web/API · internal/AD) · QLoRA on the RTX 4060 Ti · two generic shell primitives, no hard-coded tool list · routed by engagement type in the orchestrator</span>
     </div>
     <span class="status future">◈ FUTURE</span>
-  </div>
-  <div class="goal">
-    <div class="goal-num">14</div>
-    <div class="goal-text">
-      <strong>Architecture Enhance Research</strong>
-      <span>Active research topics: model retraining, RAG, tighter scope control, integrating open-source tools directly into the orchestration layer, more API functionality per architecture component, and controlling data trust boundaries between the various APIs' input and output</span>
-    </div>
-    <span class="status active">▷ IN PROGRESS</span>
   </div>
 </div>
 
@@ -926,10 +911,10 @@ of agentic pentest tooling — not a hypothetical.</p>
 <h3>The guardrail stack</h3>
 <p>Validation happens in <code>tools.py</code> before anything executes. Layered, fail-closed:</p>
 <ul>
-  <li><strong style="color:#fff">No arbitrary shell.</strong> Commands are rejected outright if they contain <code>;</code>, redirection (<code>&gt; &lt;</code>), or command substitution (<code>` </code>/<code>$(...)</code>) — those stay structurally impossible. <code>&amp;&amp;</code> (sequencing) and <code>|</code> (piping) <em>are</em> permitted, relaxed on 2026-06-19 for this single-operator context so the model can combine allowed tools in one step (e.g. <code>whatweb … &amp;&amp; sslscan …</code>, <code>curl &lt;in-scope&gt; | html2text</code>) — but every stage is still <code>shlex</code>-split into its own argv list and run directly, never via <code>sh -c</code>, and <strong style="color:#fff">each stage is independently re-validated</strong> against the full guardrail stack (allowlist, deny-flags, destructive denylist, scope) before any stage of the chain is allowed to run — one failing stage blocks the whole chain.</li>
+  <li><strong style="color:#fff">No shell.</strong> Commands are rejected if they contain <code>; | &amp; $ ` &gt; &lt;</code>, then <code>shlex</code>-split into an argv list and run directly — never via <code>sh -c</code>. Chaining, piping, redirection, and command substitution are structurally impossible.</li>
   <li><strong style="color:#fff">Binary allowlist.</strong> <code>argv[0]</code> must be a key in an operator-editable <code>tools.yaml</code>. Missing file ⇒ no tools run. The model is only <em>told</em> about the tools in this file.</li>
   <li><strong style="color:#fff">Per-tool deny-flags + a destructive denylist.</strong> Specific dangerous flags are blocked even on allowed tools; a defence-in-depth screen catches <code>rm -rf</code>, <code>mkfs</code>/<code>dd</code>, <code>shutdown</code>, fork bombs, <code>DROP TABLE</code>, <code>curl | bash</code>, etc.</li>
-  <li><strong style="color:#fff">Scope / egress enforcement.</strong> Every destination host in a command (URLs and bare targets) must be an <em>exact</em> match in <code>scope.yaml</code> — a parent domain does <em>not</em> authorise its subdomains, and a missing/empty file fails closed. Out-of-scope ⇒ blocked before execution. This is the hard control — but today <code>scope.yaml</code> is still a static, operator-edited file (edit + restart the orchestrator to apply). Making scope update <strong style="color:#fff">dynamically from the operator's initial prompt</strong> — e.g. stating the target web application or internal subnet as part of the engagement kick-off, instead of hand-editing the file — is an active goal, not yet built (see §05, goal 09f).</li>
+  <li><strong style="color:#fff">Scope / egress enforcement.</strong> Every destination host in a command (URLs and bare targets) must be an <em>exact</em> match in <code>scope.yaml</code> — a parent domain does <em>not</em> authorise its subdomains. Out-of-scope ⇒ blocked before execution. This is the hard control.</li>
   <li><strong style="color:#fff">Runaway controls.</strong> Max steps, max tool executions, a wall-clock time budget, and duplicate-command detection stop loops from spinning.</li>
   <li><strong style="color:#fff">Sandbox by default.</strong> The Orchestrator API forces container execution; there is no host-RCE path on the public route.</li>
 </ul>
@@ -952,7 +937,7 @@ preamble, and the seeded vector-memory entries were cleared. The lesson is the s
 every agent: <strong style="color:#fff">prompt-level mitigations help, but the real control is a
 deterministic allowlist the model cannot talk its way past.</strong></p>
 
-<h2><span class="num">08 //</span> Changes, Progress &amp; Improvements</h2>
+<h2><span class="num">08 //</span> Suggested Improvements &amp; What Changed</h2>
 
 <h3>Model Selection — settled on hermes3:8b</h3>
 <p>The original uncensored Gemma model was great for unrestricted output but weak at agentic discipline.
@@ -990,6 +975,12 @@ firewall can't see: all internet traffic terminates and authenticates at the Pi 
 after fixing a bug where the log silently truncated output to the first ~500 bytes. When a hard size cap
 trips, an explicit truncation marker is written so it is never silent again.</p>
 
+<h3>Storage &amp; POPIA — still planned</h3>
+<p>A second NVMe for a dedicated <code>/models</code> + <code>/data</code> mount (so the OS can be rebuilt
+without re-downloading models or losing ChromaDB) remains on the list, as does a data-sanitisation layer
+that strips client PII before any prompt reaches the backend — a prerequisite before this touches real
+engagement data, and aligned with POPIA obligations.</p>
+
 <h3>Resolved — the "long runs time out on the web" bug had a boring root cause</h3>
 <p>The previous edition of this post treated this as an open architecture question — async job model vs.
 SSE streaming. Digging into it properly turned up something much more mundane: the orchestrator's own
@@ -1006,6 +997,11 @@ browser or CLI — hiding the polling from the client entirely. One more subtlet
 Apache's own <code>Timeout</code> directive (300s) is a <em>second</em>, independent ceiling above PHP's,
 so the orchestrator's timeout was tuned down to stay safely under it rather than past it. The lesson:
 when something "just times out," check every layer in the request path, not just the one you built.</p>
+
+<h2><span class="num">09 //</span> Latest Iteration — Memory, a Loop That Always Answers, &amp; Conversations</h2>
+
+<p>The most recent round of work was about making the assistant <em>dependable</em> on long, messy,
+real-world prompts — and pleasant to actually use day to day. Four changes stand out.</p>
 
 <h3>A loop that always returns something useful</h3>
 <p>Early on, a broad prompt ("assess this site") could make the agent loop over many tools and then hit
@@ -1037,6 +1033,17 @@ the first message. Worth stressing a distinction that trips people up: this
 <strong style="color:#fff">conversation history</strong> (frontend, per-user chat threads) is a different
 thing from the agent's <strong style="color:#fff">memory</strong> (backend vector store for the tool loop).
 Same word, two layers.</p>
+
+<h3>One guardrail, deliberately relaxed</h3>
+<p>Because this is a <strong style="color:#fff">single, authorised operator</strong> — not an anonymous
+public service — I relaxed the rule that blocked <code>&amp;&amp;</code>, so the model can sequence a few
+tools in one step (<code>whatweb … &amp;&amp; sslscan …</code>). The safety bar stayed exactly where it was:
+the command is split on <code>&amp;&amp;</code>, and <strong style="color:#fff">each sub-command is validated
+independently</strong> (allowlist, destructive denylist, and the in-scope egress check) and run on its own
+argument list — <em>never</em> through a real shell. So a chain like <code>whatweb &lt;in-scope&gt; &amp;&amp;
+curl evil.com</code> is still blocked in full. This is a good example of a security decision that follows the
+<strong style="color:#fff">trust boundary</strong>: when the principal is trusted and vetted, you can trade
+some friction for usability — without giving up the structural controls.</p>
 
 <h3>A real CLI binary — <code>llmctl</code>, with per-user API tokens</h3>
 <p>The original goal list promised a "Private CLI Agent — a terminal client that connects to the private
@@ -1125,7 +1132,17 @@ proving this out was also, incidentally, a live re-confirmation that the scope g
 the same prompt against a host <em>not</em> in <code>scope.yaml</code> is auto-blocked before it ever
 reaches the confirm prompt.</p>
 
-<h2><span class="num">09 //</span> Learning Integration — Anthropic Academy</h2>
+<div class="callout">
+  <div class="callout-label">🔭 Next: a vetted user-registration phase (designed, not built)</div>
+  Today the portal is single-operator. The next milestone is letting others <em>request</em> access while
+  keeping a strict <strong style="color:#fff">human-in-the-loop</strong>: a registration request creates a
+  <em>pending</em> account that can log in to nothing until the admin explicitly approves it (default-deny),
+  followed by MFA enrolment. Tool-executing "Agent mode" stays admin-only at first. This introduces a small
+  <strong style="color:#fff">principal hierarchy</strong> — admin vs approved user — each with its own
+  <strong style="color:#fff">persona</strong> and permissions, all still behind the same private trust boundary.
+</div>
+
+<h2><span class="num">10 //</span> Learning Integration — Anthropic Academy</h2>
 
 <p>This project is being built in parallel with structured learning using, <a href="https://academy.anthropic.com" target="_blank">Anthropic Academy</a> and <a href="https://ine.com/security/certifications/eais-certification" target="_blank">INE eAIS - AI/LLM Systems Security Specialist Architect</a>. The following modules directly inform the private LLM assistant and agent architecture design decisions:</p>  
 
@@ -1160,25 +1177,17 @@ reaches the confirm prompt.</p>
   what to call and how to call it.
 </div>
 
-<h3>Reference — AI/LLM Security Study Summary</h3>
-<p>The approach to AI/LLM security that steers this build — how I think about prompt injection, excessive
-agency, insecure output handling, trust boundaries, and the defensive controls behind the guardrail stack —
-is consolidated in my public <a href="https://github.com/botesjuan/PenTestMethodology/blob/master/sections/ai_llm.md" target="_blank">AI/LLM Security study summary</a>.
-It is a living, vendor-neutral page in my Penetration Testing Methodology repository: a running set of notes
-on LLM attack surfaces, the OWASP LLM Top&nbsp;10, and the testing and hardening methodology I apply when
-building and reviewing agentic systems like this one.</p>
-
-<h2><span class="num">10 //</span> Future Planned Steps</h2>
+<h2><span class="num">11 //</span> Future Planned Steps</h2>
 
 <ol>
-  <li><strong style="color:#fff">Train the engagement-type specialist models</strong> — see <a href="#specialist-model-training">Section 11 — Specialist Model Training</a>; datasets are expanding, first QLoRA runs are next.</li>
-  <li>Verify the admin portal's token generate/rotate/revoke buttons end-to-end in a real browser/MFA session.</li>
-  <li>Tighten <code>llmctl chat</code>'s client-side proposals to the same allowlist/deny-flags granularity the sandbox path already has.</li>
-  <li>Ingest real pentest notes, CVE feeds, and past engagement reports into long-term memory.</li>
-  <li>Build the vetted new-user registration &amp; approval flow — default-deny, admin-only Agent mode at first.</li>
-  <li>Upgrade the web frontend with file/image upload and image-to-text.</li>
-  <li>Keep testing function-calling models bigger than <code>hermes3:8b</code>, using the full 64GB system memory for models beyond 14B.</li>
-  <li>Add a PII/POPIA data-sanitisation layer before any real client data reaches the backend.</li>
+  <li><strong style="color:#fff">Train the engagement-type specialist models</strong> — fine-tune purpose-built web/API and infra/AD brains with open tool calling on the RTX 4060 Ti (see <a href="#specialist-model-training">Section 12 — Specialist Model Training</a>); currently expanding the training datasets and preparing the first QLoRA runs.</li>
+  <li>Verify the new token generate/rotate/revoke buttons in the admin portal end-to-end in a real browser/MFA session (only function-level tested so far).</li>
+  <li>Give <code>llmctl chat</code>'s client-side proposals the same allowlist/deny-flags granularity <code>tools.yaml</code> already gives the sandbox path — today it leans on operator confirmation plus the destructive-denylist/scope backstop, which is intentional but worth tightening further.</li>
+  <li>Ingest real pentest notes, CVE feeds, and past engagement reports into the long-term memory tier so recall draws on actual knowledge.</li>
+  <li>Build the vetted new-user registration &amp; approval flow — request → admin approval → MFA enrol, default-deny, Agent mode admin-only at first.</li>
+  <li>Upgrade the web frontend with file + image upload and image-to-text via a multimodal endpoint.</li>
+  <li>Add second NVMe storage for model-library expansion (dedicated <code>/models</code> + <code>/data</code> mounts).</li>
+  <li>Integrate a PII / POPIA sanitisation layer before any real client data touches the system.</li>
   <li>Document each completed phase as a follow-up post on this blog.</li>
 </ol>
 
@@ -1191,7 +1200,7 @@ recently — <code>llmctl chat</code>'s local plan/act/observe loop with per-com
 multi-turn context, encrypted history, config profiles, session resume, and automatic CLAUDE.md-format
 command logging, validated end-to-end against a live webhook.</p>
 
-<h2 id="specialist-model-training"><span class="num">11 //</span> Specialist Model Training — Engagement-Type Fine-Tuned Tool Calling</h2>
+<h2 id="specialist-model-training"><span class="num">12 //</span> Specialist Model Training — Engagement-Type Fine-Tuned Tool Calling</h2>
 
 <p><strong style="color:#fff">Status: In Progress · June 2026.</strong> The agent loop already runs well with
 <code>hermes3:8b</code> as the general-purpose brain. The next evolution is <strong style="color:#fff">purpose-built
@@ -1282,7 +1291,66 @@ engagement type passed at session start routes to the appropriate specialist:</p
 match against <code>scope.yaml</code>, fail-closed — sits in the dispatcher <em>before</em> any
 <code>shell_exec</code> reaches the sandbox, unchanged from the existing guardrail stack.</p>
 
-<h2><span class="num">12 //</span> Build Summary</h2>
+<div class="callout improvement">
+  <div class="callout-label">💡 Why this is worth the effort</div>
+  The general <code>hermes3:8b</code> is good at <em>following</em> a system prompt that tells it to reason about
+  tools. A fine-tuned specialist has that reasoning <strong style="color:#fff">in its weights</strong> — it does
+  not need to be prompted into it, does not drift from the pattern on long context, and does not need per-engagement
+  prompt surgery. The payoff: a shorter, cleaner system prompt, more consistent tool-invocation structure, and
+  analysis that already speaks the right language for the engagement type. The secondary benefit holds even if the
+  fine-tune doesn't beat the base — the process forces a structured corpus of high-quality pentest reasoning
+  examples, which is worth building regardless.
+</div>
+
+<div class="goals">
+  <div class="goal">
+    <div class="goal-num">a</div>
+    <div class="goal-text"><strong>Dataset generator scripts written</strong><span>web/API + infra/AD seed sets</span></div>
+    <span class="status done">✓ DONE</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">b</div>
+    <div class="goal-text"><strong>Axolotl QLoRA configs tuned</strong><span>for RTX 4060 Ti 16GB</span></div>
+    <span class="status done">✓ DONE</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">c</div>
+    <div class="goal-text"><strong>Two-primitive tool schema defined &amp; validated</strong><span>shell_exec + shell_install only</span></div>
+    <span class="status done">✓ DONE</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">d</div>
+    <div class="goal-text"><strong>Orchestrator routing + scope enforcement designed</strong><span>engagement-type → specialist, dispatcher-side guardrails</span></div>
+    <span class="status done">✓ DONE</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">e</div>
+    <div class="goal-text"><strong>Dataset expansion to 500+ examples per specialist</strong><span>ongoing — sanitised logs, BSCP, GOAD-Light, write-ups</span></div>
+    <span class="status active">▷ IN PROGRESS</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">f</div>
+    <div class="goal-text"><strong>First QLoRA training run — web/API specialist</strong></div>
+    <span class="status planned">◻ PLANNED</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">g</div>
+    <div class="goal-text"><strong>First QLoRA training run — infra/AD specialist</strong></div>
+    <span class="status planned">◻ PLANNED</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">h</div>
+    <div class="goal-text"><strong>Smoke test — specialist vs base on engagement-type prompts</strong></div>
+    <span class="status planned">◻ PLANNED</span>
+  </div>
+  <div class="goal">
+    <div class="goal-num">i</div>
+    <div class="goal-text"><strong>Production deployment via Ollama on z490</strong></div>
+    <span class="status planned">◻ PLANNED</span>
+  </div>
+</div>
+
+<h2><span class="num">13 //</span> Build Summary — For Anyone Researching the Same Setup</h2>
 
 <p>A vendor-neutral blueprint for a private, self-hosted, tool-executing LLM assistant. No secret sauce —
 just the components and the order that worked. Swap any piece for an equivalent.</p>
@@ -1343,7 +1411,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
   first, expose the agent second.
 </div>
 
-<h2><span class="num">13 //</span> Glossary of LLM Terms</h2>
+<h2><span class="num">14 //</span> Glossary of LLM Terms</h2>
 
 <p>Here are the key terms used above, in my Private LLM Assistant infrastructure.</p>
 
@@ -1507,7 +1575,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
 
   <div class="gloss">
     <div class="term">Memory</div>
-    <div class="def">What the assistant can recall <em>beyond the current message</em>. Here it's the agent's vector store (section 08): "long-term" memory of past findings across sessions, and "working" memory of the current run so a long investigation doesn't forget its earlier steps. Distinct from conversation history below — memory is the agent recalling facts; history is the literal chat transcript.</div>
+    <div class="def">What the assistant can recall <em>beyond the current message</em>. Here it's the agent's vector store (section 09): "long-term" memory of past findings across sessions, and "working" memory of the current run so a long investigation doesn't forget its earlier steps. Distinct from conversation history below — memory is the agent recalling facts; history is the literal chat transcript.</div>
   </div>
 
   <div class="gloss">
