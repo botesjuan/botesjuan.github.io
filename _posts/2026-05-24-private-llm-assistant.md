@@ -582,7 +582,8 @@ say yes</em>. Same token, same public API, two very different trust boundaries.<
   OLLAMA_BASE_URL           <span class="c-amber">http://&lt;gpu-node&gt;:11434</span>   <span class="c-dim"># LAN only</span>
 
 <span class="c-green">Active Models</span>
-  hermes3:8b                <span class="c-dim"># DEFAULT — agentic discipline + function calling, steerable</span>
+  hermes4:14b               <span class="c-dim"># DEFAULT — Hermes 4 (Qwen3-14B base) · ~30 tok/s · 100% GPU @ 16K · tools + reasoning</span>
+  hermes3:8b                <span class="c-dim"># previous default — agentic discipline + function calling, steerable</span>
   llama3.1:8b               <span class="c-dim"># clean native tool-calls, fast</span>
   qwen2.5:14b               <span class="c-dim"># stronger general reasoning</span>
   qwen2.5-coder:14b         <span class="c-dim"># strongest command/shell generation</span>
@@ -635,7 +636,7 @@ than kept as standalone update banners:</p>
   <li>Web portal multiple persistent conversations sidebar and single authorised operator.</li>  
   <li><code>llmctl</code> LLM Control terminal tool in Go code, authenticating with a per-user API bearer
   token, integrated with public API <code>llm_api.php</code> at web portal.</li>
-  <li>Current tool calling functioning model <code>hermes3:8b</code> stays the default.</li>
+  <li>Default tool-calling model upgraded to <code>hermes4:14b</code> (Nous Hermes 4, Qwen3-14B base) — ~30 tok/s, 100% on the 16GB GPU at 16K context, verified end-to-end on an authorized live target.</li>
   <li><code>llmctl chat</code> added a local plan/act/observe mode: a stepwise planner proposes one
   command at a time and nothing executes until it's explicitly approved human-in-the-loop,
   plus multi-turn context, encrypted local history, named config profiles, session resume, and 
@@ -822,8 +823,8 @@ than kept as standalone update banners:</p>
   <div class="goal">
     <div class="goal-num">11</div>
     <div class="goal-text">
-      <strong>Function Calling model expansion</strong>
-      <span>Testing new function-calling models larger than the current default <code>hermes3:8b</code> · use the motherboard's full 64GB system memory to run future models beyond 14B</span>
+      <strong>Function Calling model expansion &amp; Architecture Enhance Research</strong>
+      <span>Default moved from <code>hermes3:8b</code> to <code>hermes4:14b</code> (still 100% GPU, no offload needed at 14B). Ongoing research: use the motherboard's full 64GB system memory to run models larger than GPU VRAM — partial CPU offload, MoE expert offload, KV-cache quantization — held pending the arrival of lower-cost AI/LLM inference hardware.</span>
     </div>
     <span class="status active">▷ IN PROGRESS</span>
   </div>
@@ -874,7 +875,7 @@ the sandbox first — no Python code changes.</p>
   ├─ sends goal to <span class="c-amber">http://&lt;gpu-node&gt;:11434/api/chat</span>
   │
   ▼
-<span class="c-purple">LLM (hermes3:8b — default)</span>
+<span class="c-purple">LLM (hermes4:14b — default)</span>
   │   reasons about the goal
   │   writes one command:  execute_command("gobuster dir -u … -w …")
   │
@@ -942,14 +943,21 @@ wall — the honest posture for a single-operator tool where I am the one readin
 
 <h2><span class="num">08 //</span> Changes, Progress &amp; Improvements</h2>
 
-<h3>Model Selection — settled on hermes3:8b</h3>
+<h3>Model Selection — upgraded to hermes4:14b</h3>
+<p><strong style="color:#fff">Update (2026-07):</strong> the default is now
+<strong style="color:#fff">hermes4:14b</strong> — Nous <strong style="color:#fff">Hermes 4 14B</strong>
+(Qwen3-14B base, Q4_K_M GGUF), replacing the long-standing <code>hermes3:8b</code>. It benchmarks at
+<strong style="color:#fff">~30 tokens/sec</strong>, runs <strong style="color:#fff">100% on the 16&nbsp;GB
+GPU</strong> at 16K context (~13.7&nbsp;GB, no CPU offload needed), and passed a live agent tool-call
+test against an authorized target with clean ReAct discipline. Its Qwen3 reasoning is chatty in plain
+chat but does not disrupt the tool loop. The bake-off history below is what led here.</p>
 <p>The original uncensored Gemma model was great for unrestricted output but weak at agentic discipline.
-After a tool-calling smoke test across several models the default is now
-<strong style="color:#fff">hermes3:8b</strong> (NousResearch Hermes 3, Llama-3.1 based) — strong
-function-calling and instruction-following, steerable, and it runs 100% on the GPU at a 16K context
-(~10&nbsp;GB). Findings from the bake-off:</p>
+The prior default <strong style="color:#fff">hermes3:8b</strong> (NousResearch Hermes 3, Llama-3.1 based)
+won an earlier tool-calling smoke test — strong function-calling and instruction-following, steerable,
+100% on the GPU at 16K context (~10&nbsp;GB). Findings from that bake-off:</p>
 <ul>
-  <li><strong style="color:#fff">hermes3:8b</strong> — runs only the requested command, no stray tools, no refusals on authorized prompts. Best loop discipline → the default for both the orchestrator and the web chat.</li>
+  <li><strong style="color:#fff">hermes4:14b</strong> — <em>current default.</em> Hermes 4 (Qwen3-14B base) at Q4_K_M; still 100% GPU at 16K (~13.7&nbsp;GB), ~30 tok/s, tools + reasoning, clean ReAct in the orchestrator.</li>
+  <li><strong style="color:#fff">hermes3:8b</strong> — previous default; runs only the requested command, no stray tools, no refusals on authorized prompts. Best loop discipline of the 8B class.</li>
   <li><strong style="color:#fff">llama3.1:8b</strong> — cleanest native Ollama <code>tool_calls</code>, fast.</li>
   <li><strong style="color:#fff">qwen2.5:14b</strong> — more capable reasoning, native tool-calls, but at 16K context it spills past 16&nbsp;GB VRAM into CPU offload and gets slow.</li>
   <li><strong style="color:#fff">qwen2.5-coder:14b</strong> — strongest raw command generation, but weaker agentic discipline (occasional stray tool) and emits tool calls as plain-text JSON in content rather than native fields.</li>
@@ -967,6 +975,34 @@ function-calling and instruction-following, steerable, and it runs 100% on the G
   not a substitute for testing a candidate model against your actual agent prompts and actually reading
   its tool logs against its claims.
 </div>
+
+<h3>Measuring &amp; Validating the Assistant — Gin &amp; Juice Shop</h3>
+<p>A private assistant is only as good as what you can prove it does. To measure and validate the agent
+end-to-end I test it against <strong style="color:#fff">Gin &amp; Juice Shop</strong>
+(<a href="https://ginandjuice.shop" target="_blank">ginandjuice.shop</a>) — PortSwigger's deliberately
+vulnerable, publicly authorized practice site — which is listed in the orchestrator's
+<code>scope.yaml</code>. It publishes its intended vulnerability set and test credentials
+(<code>carlos</code> / <code>hunter2</code>) at
+<a href="https://ginandjuice.shop/vulnerabilities" target="_blank">/vulnerabilities</a>, so that list
+becomes a <strong style="color:#fff">ground-truth answer key</strong>: I can score whether the assistant
+picks the right tool, reaches the real finding, and backs it with genuine evidence rather than a
+plausible-sounding fabrication.</p>
+<p>The documented categories used as the scorecard span:</p>
+<ul>
+  <li><strong style="color:#fff">SQL injection</strong> — <code>/catalog</code></li>
+  <li><strong style="color:#fff">Reflected &amp; DOM-based XSS</strong> — <code>/catalog</code>, <code>/login</code>, <code>/catalog/subscribe</code></li>
+  <li><strong style="color:#fff">XML external entity (XXE) injection</strong> — <code>/catalog/product/stock</code></li>
+  <li><strong style="color:#fff">Client-side prototype pollution &amp; template injection</strong> — <code>/about</code>, <code>/blog</code></li>
+  <li><strong style="color:#fff">Open redirection, HTTP response-header injection, base64 parameter &amp; DOM data manipulation</strong></li>
+  <li><strong style="color:#fff">Vulnerable JS dependency</strong> — Angular 1.7.7</li>
+</ul>
+<p><strong style="color:#fff">First results (2026-07):</strong> live runs on the new
+<code>hermes4:14b</code> default drove clean ReAct discipline — a single well-formed
+<code>whatweb</code> recon call, a real captured result, and an accurate summary (AWS load balancer,
+backend headers, resolved IP) with no fabricated findings — verified both standalone and through the
+production submit-then-poll <code>/run</code> API. Next is a structured per-category test-prompt suite and
+a repeatable pass/fail scorecard (tool chosen · finding reached · evidence quality) so model and
+architecture changes can be regression-tested against a known target over time.</p>
 
 <h3>API Security — done</h3>
 <p>The new Orchestrator API requires an <code>X-API-Key</code> header (a per-host shared secret) on top of
@@ -1163,7 +1199,8 @@ building and reviewing agentic systems like this one.</p>
   <li>Ingest real pentest notes, CVE feeds, and past engagement reports into long-term memory.</li>
   <li>Build the vetted new-user registration &amp; approval flow — default-deny, admin-only Agent mode at first.</li>
   <li>Upgrade the web frontend with file/image upload and image-to-text.</li>
-  <li>Keep testing function-calling models bigger than <code>hermes3:8b</code>, using the full 64GB system memory for models beyond 14B.</li>
+  <li>Default upgraded to <code>hermes4:14b</code> (done). Continue the architecture-enhance research into running models <em>larger than GPU VRAM</em> off the motherboard's full 64GB system memory — partial CPU offload, MoE expert offload, KV-cache quantization — held pending lower-cost inference hardware.</li>
+  <li><strong style="color:#fff">Measure &amp; validate the assistant</strong> against <a href="https://ginandjuice.shop/vulnerabilities" target="_blank">Gin &amp; Juice Shop</a>'s published vulnerability set (SQLi, XSS, XXE, prototype pollution, open redirect, vulnerable JS deps) as ground truth — build a per-category test-prompt suite and a repeatable pass/fail scorecard to catch model/architecture regressions.</li>
   <li>Add a PII/POPIA data-sanitisation layer before any real client data reaches the backend.</li>
   <li>Document each completed phase as a follow-up post on this blog.</li>
 </ol>
@@ -1212,8 +1249,8 @@ chosen base for fine-tuning at the 7B tier. It has native tool-call support bake
 bolted on after, reliably holds the multi-step <em>reason → check → install → execute → analyse</em> pattern, and
 fits comfortably in 16&nbsp;GB VRAM at 4-bit quantisation — the hard constraint of this build.</p>
 
-<p>The stack runs <code>hermes3:8b</code> as the default, and Hermes 3 is a strong
-tool-calling contender that was evaluated head-to-head. At the 7B/8B size class, Qwen2.5 edges it on structured-output
+<p>The stack now runs <code>hermes4:14b</code> as the default (Hermes 3 8B was the prior default and remains a strong
+tool-calling contender that was evaluated head-to-head). At the 7B/8B size class, Qwen2.5 edges it on structured-output
 consistency — particularly keeping the reasoning step <em>before</em> the tool call across long multi-turn context.
 Hermes 3 at 70B (Q4) would change that calculus, but that needs hardware beyond the current node. The rule before
 committing to any fine-tuning run: <strong style="color:#fff">test both base models against your actual tool-call
@@ -1246,7 +1283,7 @@ engagement type passed at session start routes to the appropriate specialist:</p
 <div class="code-block" data-lang="routing">
 <code><span class="c-amber">"web" / "api"</span>     →  web-api-pentest-specialist
 <span class="c-amber">"internal" / "ad"</span> →  infra-ad-pentest-specialist
-<span class="c-amber">default</span>           →  hermes3:8b  <span class="c-dim"># existing general model</span></code>
+<span class="c-amber">default</span>           →  hermes4:14b  <span class="c-dim"># existing general model</span></code>
 </div>
 
 <p>The tool schema exposed to the specialists registers two primitives. The dispatcher's safety floor —
