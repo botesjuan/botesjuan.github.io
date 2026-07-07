@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Building & Hosting My Own Private LLM Security Assistant"
+title: "Building & Hosting Private LLM Security Assistant"
 date: 2026-05-24
 categories: [AI, LLM Security]
 tags: [llm, ollama, ai-security, red-team, penetration-tester]
@@ -517,8 +517,7 @@ the LAN.</p>
 
 <p><code>llmctl</code> now speaks two different execution models through that same endpoint, and the
 distinction matters: <code>llmctl ask --agent</code> still means <em>the GPU node's Docker sandbox runs
-the tool</em>, while <code>llmctl chat</code> means <em>my own Kali workstation runs the tool, after I
-say yes</em>. Same token, same public API, two very different trust boundaries.</p>
+the tool</em>, while <code>llmctl chat</code> means <em>the local Kali workstation runs the tool, after approval granted</em>. Authentication token, public API, with different trust boundaries.</p>
 
 <h2><span class="num">03 //</span> Hardware</h2>
 
@@ -768,7 +767,7 @@ than kept as standalone update banners:</p>
     <div class="goal-num">09e</div>
     <div class="goal-text">
       <strong>llmctl chat — local plan/act/observe loop</strong>
-      <span>Stepwise planner (no Docker) proposes one command at a time · operator approves before it runs on their own host · multi-turn context · encrypted history · profiles · resume · commands log · local tool function calling on running</span>
+      <span>Stepwise planner (no Docker) proposes one command at a time · operator approves before it runs on their local host · multi-turn context · encrypted history · profiles · resume · commands log · local tool function calling on running</span>
     </div>
     <span class="status done">✓ DONE</span>
   </div>
@@ -823,7 +822,7 @@ than kept as standalone update banners:</p>
   <div class="goal">
     <div class="goal-num">11</div>
     <div class="goal-text">
-      <strong>Function Calling model expansion &amp; Architecture Enhance Research</strong>
+      <strong>Model Expansion</strong>
       <span>Default moved from <code>hermes3:8b</code> to <code>hermes4:14b</code> (still 100% GPU, no offload needed at 14B). Ongoing research: use the motherboard's full 64GB system memory to run models larger than GPU VRAM — partial CPU offload, MoE expert offload, KV-cache quantization — held pending the arrival of lower-cost AI/LLM inference hardware.</span>
     </div>
     <span class="status active">▷ IN PROGRESS</span>
@@ -848,13 +847,13 @@ than kept as standalone update banners:</p>
     <div class="goal-num">14</div>
     <div class="goal-text">
       <strong>Architecture Enhance Research</strong>
-      <span>Active research topics: model retraining, RAG, tighter scope control, integrating open-source tools directly into the orchestration layer, more API functionality per architecture component, and controlling data trust boundaries between the various APIs' input and output</span>
+      <span>General Architecture Improvements: Model training, RAG, tighter scope control, integrating open-source tools directly into the orchestration layer, more API functionality per architecture component, and controlling data trust boundaries between the various APIs' input and output</span>
     </div>
     <span class="status active">▷ IN PROGRESS</span>
   </div>
 </div>
 
-<h2><span class="num">06 //</span> The ReAct Agent — How It Actually Runs Tools</h2>
+<h2><span class="num">06 //</span> Tool Running ReAct Agent</h2>
 
 <p>The agentic Python ReAct loop (think → act → observe → repeat) that mirrors the CLI in Terminal Code app
 experience but uses the local LLM as the brain. It runs two ways from the <em>same</em> code: a terminal
@@ -910,11 +909,11 @@ and feeding it straight back into a model that decides what to run next. This is
 <strong style="color:#fff">indirect prompt injection</strong>, and it is the central security problem
 of agentic pentest tooling — not a hypothetical.</p>
 
-<h3>The guardrail stack</h3>
+<h3>Guardrail Stack</h3>
 <p>Validation happens in <code>tools.py</code> before anything executes. Layered, fail-closed:</p>
 <ul>
-  <li><strong style="color:#fff">No arbitrary shell.</strong> Commands are rejected outright if they contain <code>;</code>, redirection (<code>&gt; &lt;</code>), or command substitution (<code>` </code>/<code>$(...)</code>) — those stay structurally impossible. <code>&amp;&amp;</code> (sequencing) and <code>|</code> (piping) <em>are</em> permitted, relaxed on 2026-06-19 for this single-operator context so the model can combine tools in one step (e.g. <code>whatweb … &amp;&amp; sslscan …</code>, <code>curl &lt;target&gt; | html2text</code>) — but every stage is still <code>shlex</code>-split into its own argv list and run directly, never via <code>sh -c</code>, and <strong style="color:#fff">each stage is independently re-screened</strong> against the safety floor (deny-flags + destructive denylist) before any stage of the chain runs — one failing stage blocks the whole chain. This is host-hygiene, not a tool restriction: it stops destruction and shell tricks, not the model's choice of tool.</li>
-  <li><strong style="color:#fff">No tool allowlist — any tool the job needs.</strong> This is a single-operator tool for my own authorized engagements, so the model is free to pick the best tool and run it, unrestricted. If a tool isn't already baked into the sandbox image, the model is told to propose it for installation (<code>shell_install</code> via <code>apt</code>&nbsp;/&nbsp;<code>pip</code>&nbsp;/&nbsp;<code>pipx</code>&nbsp;/&nbsp;<code>go install</code>&nbsp;/&nbsp;<code>git clone</code>) and it's available from the next prompt on. There is no <code>tools.yaml</code> gate standing between the model and a binary.</li>
+  <li><strong style="color:#fff">No arbitrary shell.</strong> Commands are rejected outright if they contain <code>;</code>, redirection (<code>&gt; &lt;</code>), or command substitution (<code>` </code>/<code>$(...)</code>) — those stay structurally impossible. <code>&amp;&amp;</code> (sequencing) and <code>|</code> (piping) <em>are</em> permitted, relaxed on 2026-06-19 for this single-operator context so the model can combine tools in one step (e.g. <code>whatweb … &amp;&amp; sslscan …</code>, <code>curl &lt;target&gt; | html2text</code>) — but every stage is still <code>shlex</code>-split into its argv list and run directly, never via <code>sh -c</code>, and <strong style="color:#fff">each stage is independently re-screened</strong> against the safety floor (deny-flags + destructive denylist) before any stage of the chain runs — one failing stage blocks the whole chain. This is host-hygiene, not a tool restriction: it stops destruction and shell tricks, not the model's choice of tool.</li>
+  <li><strong style="color:#fff">No tool allowlist — any tool the job needs.</strong> This is a single-operator tool for authorized engagements, so the model is free to pick the best tool and run it, unrestricted. If a tool isn't already baked into the sandbox image, the model is told to propose it for installation (<code>shell_install</code> via <code>apt</code>&nbsp;/&nbsp;<code>pip</code>&nbsp;/&nbsp;<code>pipx</code>&nbsp;/&nbsp;<code>go install</code>&nbsp;/&nbsp;<code>git clone</code>) and it's available from the next prompt on. There is no <code>tools.yaml</code> gate standing between the model and a binary.</li>
   <li><strong style="color:#fff">Per-tool deny-flags + a destructive denylist.</strong> Specific dangerous flags are blocked even on allowed tools; a defence-in-depth screen catches <code>rm -rf</code>, <code>mkfs</code>/<code>dd</code>, <code>shutdown</code>, fork bombs, <code>DROP TABLE</code>, <code>curl | bash</code>, etc.</li>
   <li><strong style="color:#fff">Scope as guidance, not a hard wall.</strong> The engagement's targets — a web application, an internal subnet — are given to the model as <em>scope guidance</em> it's told to stay within, stated in the opening prompt or read from a local <code>scope.yaml</code>/notes file, rather than enforced as a fail-closed egress block. That's deliberate: it keeps the assistant flexible across engagements where scope shifts mid-session (see §05, goal 09f). The hard structural exfil wall is intentionally traded away for usability — on the understanding that only the trusted operator can trigger tool execution in the first place.</li>
   <li><strong style="color:#fff">Tool execution is operator-only — the real trust boundary.</strong> Agent mode, the only path that runs commands, is gated to me (the admin) alone. Every other account on the portal gets plain private chat with <strong style="color:#fff">no tool calling at all</strong>, so the relaxed tool/scope posture above only ever applies to a single authorized, MFA'd principal — not to arbitrary users.</li>
@@ -962,31 +961,30 @@ won an earlier tool-calling smoke test — strong function-calling and instructi
   <li><strong style="color:#fff">qwen2.5:14b</strong> — more capable reasoning, native tool-calls, but at 16K context it spills past 16&nbsp;GB VRAM into CPU offload and gets slow.</li>
   <li><strong style="color:#fff">qwen2.5-coder:14b</strong> — strongest raw command generation, but weaker agentic discipline (occasional stray tool) and emits tool calls as plain-text JSON in content rather than native fields.</li>
 </ul>
-<p>Switching models is a single environment variable — useful for matching the model to the task.</p>
+<p>Switching models is a single environment variable to match the model to the task.</p>
 
 <div class="callout">
   <div class="callout-label">⚠ Candidate rejected — qwen3-14b-abliterated</div>
   Qwen3 has a strong general reputation for tool-calling reliability, so an abliterated (uncensored)
-  14B build was A/B tested against <code>hermes3:8b</code> on this project's own test prompts. Rejected:
+  14B build was A/B tested against <code>hermes3:8b</code> on this project's test prompts. Rejected:
   it fabricated a complete fake HTML page as its "Final Answer" <em>before</em> the real command even
-  ran, and separately claimed an API endpoint was "found" when its own tool log showed nothing but
+  ran, and separately claimed an API endpoint was "found" when its the tool log showed nothing but
   403/404 errors — the exact fabrication failure mode documented above for
   <code>llama3.1:8b</code>, on top of running 5–17x slower. Benchmark reputation is a starting point,
   not a substitute for testing a candidate model against your actual agent prompts and actually reading
   its tool logs against its claims.
 </div>
 
-<h3>Measuring &amp; Validating the Assistant — Gin &amp; Juice Shop</h3>
-<p>A private assistant is only as good as what you can prove it does. To measure and validate the agent
-end-to-end I test it against <strong style="color:#fff">Gin &amp; Juice Shop</strong>
+<h3>Measuring &amp; Validating the Assistant</h3>
+<p>A private assistant is only as good as what security vulnerabilities it can identify. To measure and validate the agent
+end-to-end Tests against <strong style="color:#fff">Gin &amp; Juice Shop</strong>
 (<a href="https://ginandjuice.shop" target="_blank">ginandjuice.shop</a>) — PortSwigger's deliberately
-vulnerable, publicly authorized practice site — which is listed in the orchestrator's
+vulnerable, publicly authorized practice site, is listed in the orchestrator's
 <code>scope.yaml</code>. It publishes its intended vulnerability set and test credentials
 (<code>carlos</code> / <code>hunter2</code>) at
 <a href="https://ginandjuice.shop/vulnerabilities" target="_blank">/vulnerabilities</a>, so that list
-becomes a <strong style="color:#fff">ground-truth answer key</strong>: I can score whether the assistant
-picks the right tool, reaches the real finding, and backs it with genuine evidence rather than a
-plausible-sounding fabrication.</p>
+becomes a <strong style="color:#fff">ground-truth answer key</strong>: Scrorecard the assistant
+by checking if best tool selected, identify real security findings, and obtain valid evidence as proof.</p>
 <p>The documented categories used as the scorecard span:</p>
 <ul>
   <li><strong style="color:#fff">SQL injection</strong> — <code>/catalog</code></li>
@@ -996,7 +994,7 @@ plausible-sounding fabrication.</p>
   <li><strong style="color:#fff">Open redirection, HTTP response-header injection, base64 parameter &amp; DOM data manipulation</strong></li>
   <li><strong style="color:#fff">Vulnerable JS dependency</strong> — Angular 1.7.7</li>
 </ul>
-<p><strong style="color:#fff">First results (2026-07):</strong> live runs on the new
+<p><strong style="color:#fff">Smoke Test (2026-07):</strong> live runs on the new
 <code>hermes4:14b</code> default drove clean ReAct discipline — a single well-formed
 <code>whatweb</code> recon call, a real captured result, and an accurate summary (AWS load balancer,
 backend headers, resolved IP) with no fabricated findings — verified both standalone and through the
@@ -1016,10 +1014,10 @@ trips, an explicit truncation marker is written so it is never silent again.</p>
 
 <h3>Resolved — "Long runs time out on the web"</h3>
 <p>The previous edition of this post treated this as an open architecture question — async job model vs.
-SSE streaming. Digging into it properly turned up something much more mundane: the orchestrator's own
+SSE streaming. Digging into it properly turned up something much more mundane: the orchestrator's 
 <code>TIME_BUDGET</code> was never the actual limit. <strong style="color:#fff">PHP's
 <code>max_execution_time</code></strong> (30 seconds, untouched in <code>php.ini</code>) was silently
-killing the request first, every time, regardless of how generous the orchestrator's own timeout was
+killing the request first, every time, regardless of how generous the orchestrator's timeout was
 configured to be. No amount of orchestrator tuning could have fixed a PHP-layer ceiling.</p>
 <p>The actual fix was the submit-then-poll model after all — but for a better reason than "add streaming":
 <code>POST /run</code> now returns a <code>run_id</code> immediately, the agent keeps running in a
@@ -1027,11 +1025,11 @@ background thread, and <code>GET /run/&lt;run_id&gt;</code> reports live <code>s
 progress until the result is ready. <code>llm_api.php</code> polls that server-side (with
 <code>set_time_limit()</code> now explicitly raised to match) and returns one final answer to the
 browser or CLI — hiding the polling from the client entirely. One more subtlety surfaced during testing:
-Apache's own <code>Timeout</code> directive (300s) is a <em>second</em>, independent ceiling above PHP's,
+Apache's <code>Timeout</code> directive (300s) is a <em>second</em>, independent ceiling above PHP's,
 so the orchestrator's timeout was tuned down to stay safely under it rather than past it. The lesson:
 when something "just times out," check every layer in the request path, not just the one you built.</p>
 
-<h3>Loop that always returns something useful</h3>
+<h3>Loop that always returns something</h3>
 <p>Early on, a broad prompt ("assess this site") could make the agent loop over many tools and then hit
 an internal step or time limit and return a bare <code>"max steps reached"</code> — throwing away all the
 real output it had gathered. Now, whenever the loop hits any limit, it makes one final
@@ -1065,7 +1063,7 @@ Same word, two layers.</p>
 <h3>CLI binary <code>llmctl</code> per-user API tokens</h3>
 <p>The original goal list promised a "Private CLI Agent — a terminal client that connects to the private
 LLM backend." Until now that existed only as a Python invocation of <code>agent.py</code> run directly on
-the z490 workstation — useful for me, but not something that talks to the public API the way the web
+the z490 workstation, but not something that talks to the public API the way the web
 portal does. <code>llmctl</code> closes that gap: a small, dependency-free <strong style="color:#fff">static
 Go binary</strong> that copies to any Linux box and calls <code>llm_api.php</code> over HTTPS exactly the
 way the browser does, just with a different credential.</p>
@@ -1087,9 +1085,9 @@ request in, one final answer out, however long the agent actually takes to think
 <code>curl</code>/<code>wget</code>, a handful of others. It does not, and should not, bundle Burp,
 <code>nxc</code>, <code>certipy-ad</code>, <code>bloodyAD</code>, <code>evil-winrm</code>,
 <code>kerbrute</code>, impacket, <code>responder</code>, or <code>hashcat</code> — the real toolkit an
-engagement actually needs lives on my own Kali workstation, not in a throwaway container. So rather than
+engagement actually lives on local Kali workstation, not in a throwaway container. So rather than
 grow the sandbox image indefinitely, <code>llmctl</code> gained a second, distinct execution model: the
-model still reasons and proposes commands, but <em>my own host</em> runs them, and only after I say so.</p>
+model still reasons and proposes commands, but <em>local host</em> runs the tools, with approval gate.</p>
 
 <div class="code-block" data-lang="flow">
 <code><span class="c-green">llmctl chat</span> (your terminal)
@@ -1113,7 +1111,7 @@ POST /client_agent=step {session_id, observation}
 </div>
 
 <p>The trust model is the opposite of the sandbox path on purpose. There is no container here — the
-operator's own explicit approval of <strong style="color:#fff">every single command</strong> is the
+operator's explicit approval of <strong style="color:#fff">every single command</strong> is the
 control, Human-In-The-Loop before running a tool. The destructive-command denylist is still applied
 before a proposal ever reaches me, as defence-in-depth, and scope is passed to the model as advisory
 guidance — but the human approval is the primary gate here, not a hard allowlist.</p>
@@ -1298,7 +1296,7 @@ just the components and the order that worked. Swap any piece for an equivalent.
 
 <h3>1. Hardware</h3>
 <p>A headless box with a single consumer GPU is enough. The practical constraint is VRAM: a 16&nbsp;GB card
-comfortably runs 8B models at a useful context window and 14B models at lower context. Set the
+comfortably runs 14B models at a good context window. Set the
 <strong style="color:#fff">integrated graphics as the primary display in BIOS</strong> so the entire
 discrete GPU's VRAM is free for inference. Plenty of system RAM helps; a separate disk for models is a
 nice-to-have, not a blocker.</p>
@@ -1337,7 +1335,7 @@ rather than hand-writing a typed wrapper per tool. Adding a capability becomes a
 <p>Keep the inference API and agent <strong style="color:#fff">LAN-only behind a host firewall</strong>; they
 should never bind to the public internet. If you want remote access, put a small hardened frontend in front
 that terminates TLS, authenticates (session + MFA), audit-logs every prompt, and proxies to an internal
-API that requires its own key header. Two doors, both locked, with audit logging at the boundary.</p>
+API that requires its key header. Two doors, both locked, with audit logging at the boundary.</p>
 
 <h3>7. Memory</h3>
 <p>A local vector store (e.g. ChromaDB with a small embedding model) gives the agent persistent recall over
@@ -1347,7 +1345,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
 <div class="callout improvement">
   <div class="callout-label">💡 The one lesson if you read nothing else</div>
   An agent that can run commands is as safe as the boundary around <em>who</em> can make it run one and
-  <em>what</em> it can do to its own host — the no-shell executor, the destructive-command denylist, the
+  <em>what</em> it can do to its local host — the no-shell executor, the destructive-command denylist, the
   non-root sandbox, and gating tool execution to a single trusted operator — because the model
   <em>will</em> eventually be told to do something dangerous by content it reads. Decide that boundary
   first, expose the agent second.
@@ -1397,7 +1395,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
 
   <div class="gloss">
     <div class="term">Ollama</div>
-    <div class="def">The local model-serving software used in this project. It downloads, stores, and runs open models on your own hardware and exposes them over a simple Model API — so everything stays offline on the GPU node instead of going to a cloud provider.</div>
+    <div class="def">The local model-serving software used in this project. It downloads, stores, and runs open models on your private hardware and exposes them over a simple Model API — so everything stays offline on the GPU node instead of going to a cloud provider.</div>
   </div>
 
   <div class="gloss">
@@ -1467,7 +1465,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
 
   <div class="gloss">
     <div class="term">Chunks</div>
-    <div class="def">Big documents are split into smaller pieces ("chunks") before being embedded and stored, so search can return just the relevant paragraph rather than a whole 50-page report. Good chunking is half the battle in making retrieval useful.</div>
+    <div class="def">Big documents are split into smaller pieces ("chunks") before being embedded and stored, so search can return just the relevant paragraph rather than a whole 50-page report. Good chunking is half the battle in making retrieval valuable.</div>
   </div>
 
   <div class="gloss">
@@ -1552,7 +1550,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
 
   <div class="gloss">
     <div class="term">Trust boundary</div>
-    <div class="def">An imaginary line separating things you trust from things you don't — and where you therefore check, authenticate, or sanitise. Crossing it should require proof. Here the public internet → the authenticated Pi is one boundary; the model's own output → a real command is another (which is why every command is validated). Good security design is mostly knowing where your boundaries are and guarding them.</div>
+    <div class="def">An imaginary line separating things you trust from things you don't — and where you therefore check, authenticate, or sanitise. Crossing it should require proof. Here the public internet → the authenticated Pi is one boundary; the model's output → a real command is another (which is why every command is validated). Good security design is mostly knowing where your boundaries are and guarding them.</div>
   </div>
 
   <div class="gloss">
