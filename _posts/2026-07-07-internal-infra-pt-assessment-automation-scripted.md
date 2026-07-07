@@ -17,15 +17,15 @@ excerpt: "How I turned the repeatable grind of an internal infrastructure and Ac
 
 # Internal Infra PT Assessment <span class="cyan">Automation</span>, Scripted
 
-Every internal infrastructure engagement starts the same way. You plug into a subnet you have never seen before, and for the first hour you are not hacking anything, you are just *asking questions*. What is alive? Which boxes are domain controllers? What speaks SMB, which shares are open, where are the certificate services, is there a way out to the internet? The findings come later, but only if the enumeration underneath them was thorough, ordered, and did not miss the boring host in the corner that turns out to hold the crown jewels.
+Every internal infrastructure engagement starts the same way. Red Team operator plug into a subnet never seen before, and for the first hour no hacking, operator are just *asking questions*. What is alive? Which boxes are domain controllers? What speaks SMB or NFS, which shares are open, where are the certificate services, is there a way out to the internet? The findings come later, but only if the enumeration underneath them was thorough, ordered, and did not miss the boring legacy host in the corner that turns out to hold the crown jewels on windows server 2008.
 
-That opening hour is the same on every job. So I scripted it.
+That opening hour is the same on every job. So now it is scripted.
 
-> **Repository:** [github.com/botesjuan/Private-Internal-Infra-AD-Pentest-Scripts](https://github.com/botesjuan/Private-Internal-Infra-AD-Pentest-Scripts)
+> **Repository:** [github.com/botesjuan/Internal-Infra-AD-Pentest-Scripts](https://github.com/botesjuan/Internal-Infra-AD-Pentest-Scripts)
 
 This post walks through a reusable, **offline-capable**, **non-destructive** Python script set for internal infrastructure and Active Directory engagements. It requires no internet onsite, it is customer-agnostic, and every stage shares one output tree so each script's results become the next script's input. It is not a framework and it is not trying to be Metasploit, it is the disciplined, safe version of the enumeration I would otherwise be doing by hand at 11pm on day one.
 
-> *The tool does not find the bug. It just makes sure you never skip the step that would have.*
+> *The tool does not find the bug. It just makes sure checklist never skip the step that would have.*
 
 ## Starting from goals, not tools
 
@@ -48,9 +48,9 @@ Every script in the repo exists to answer one or more of those goals, and nothin
 
 ## Three design principles that never bend
 
-An internal engagement is played on someone else's production network. Fragile IOT, printers that fall over if you look at them wrong, account lockout policies waiting to lock out the very users you validated. So the whole set is built on three rules that never bend.
+An internal engagement is played on someone else's production network. Fragile IOT, printers that fall over if someone look at them wrong, account lockout policies waiting to lock out the very users being validated. So the whole set is built on three rules that never bend.
 
-**Offline.** Standard-library Python only, no auto-updates, no dependency on being able to reach the internet from the client site. Every tool it shells out to degrades gracefully if it is missing. What you tested with in the lab is exactly what runs onsite in an air-gapped segment.
+**Offline.** Standard-library Python only, no auto-updates, no dependency on being able to reach the internet from the client site. Every tool it shells out to degrades gracefully if it is missing. What is tested with in the lab is exactly what runs onsite in an segmented network like an air-gapped CIA room in mission impossible movie.
 
 **Safe.** Enumeration only. No DoS, no `DROP` or `DELETE`, no data modification, no aggressive NSE scripts. There is even a destructive-command guard in `lib/pentest_lib.py` that blocks obvious bad tokens as a backstop, so a fat-fingered flag cannot turn a read into a write.
 
@@ -95,9 +95,9 @@ The stages are designed to feed each other. Discovery has to run first because e
 
 ## One command for the whole chain
 
-The stages run individually, but the orchestrator `run_all.py` drives the lot in the right order. The workflow splits cleanly by what you have in hand.
+The stages run individually, but the Orchestrator `run_all.py` drives the set of automation scripts in order. The workflow splits cleanly by what is in hand.
 
-**Phase 0, before you go onsite**, while you still have internet:
+**Phase 0, before going onsite**, OSINT dark web internet:
 ```bash
 sudo ./preflight_check.py            # every tool + wordlist present? fix the reds NOW
 ```
@@ -109,7 +109,7 @@ sudo ./run_all.py -subnet 10.0.0.0/24 -domain corp.local -listusernames users.tx
 ```
 Running under `sudo` buys the better host discovery, `-domain` lets kerbrute validate users and AS-REP roast lockout-safe, and `-listusernames` feeds the OSINT username list. In this workflow the AD stage automatically runs the lockout-safe **username==password** single test on every validated user, and any hit lands in `output/ad_recon/weak_credentials.txt` and at the top of `SUMMARY.md`. If it finds a login, `run_all.py` promotes that credential into the downstream stages by itself.
 
-**Phase 2, the moment you have one credential**:
+**Phase 2, the moment one credential found**:
 ```bash
 sudo ./run_all.py -subnet 10.0.0.0/24 -domain corp.local \
      -username jsmith -password 'P@ss' \
@@ -117,16 +117,16 @@ sudo ./run_all.py -subnet 10.0.0.0/24 -domain corp.local \
 ```
 That single command adds kerberoasting, authenticated enumeration, certipy ESC template analysis, credentialed service checks, and a rusthound-ce collection imported straight into BloodHound CE, ready for attack-path review.
 
-**Phase 3, targeted follow-ups, only when authorised**, is where the guarded password spray lives, and it will not run until you supply the lockout threshold and the double confirmation.
+**Phase 3, targeted follow-ups, only when authorised**, is where the guarded password spray lives, and it will not run until supplied the lockout threshold and the double confirmation.
 
 ## Everything is evidence
 
-An internal engagement is only as good as the record you can hand back. Every external command the set runs is appended to `output/logs/commands.log` in the CLAUDE.md format, `[YYYY-MM-DD HH:MM] - [Tool] - [Purpose]` followed by the command itself. Every stage writes a `*_report.md`, and the orchestrator rolls the headline findings of all of them into a single `SUMMARY.md` you read first. The chainable `.txt` lists are both machine input for the next stage and human evidence for the report. When a High or Critical surfaces, a spray hit, an ESC template, an exposed LLM, the tool follows the same protocol I would, it flags it at the top of the summary so I confirm impact and notify the engagement lead before going any further.
+An internal engagement is only as good as the record handed back. Every external command the set runs is appended to `output/logs/commands.log` in the CLAUDE.md format, `[YYYY-MM-DD HH:MM] - [Tool] - [Purpose]` followed by the command itself. Every stage writes a `*_report.md`, and the orchestrator rolls the headline findings of all of them into a single `SUMMARY.md` read first. The chainable `.txt` lists are both machine input for the next stage and human evidence for the report. When a High or Critical surfaces, a spray hit, an ESC template, an exposed LLM, the tool follows the same protocol I would, it flags it at the top of the summary so I confirm impact and notify the engagement lead before going any further.
 
 ## Why script the boring part
 
-The senior tester is not distinguished by knowing more exploits, it is by never forgetting the boring step that becomes the critical finding. The unconstrained delegation you did not enumerate. The certificate template you skipped because it was 11pm. The writable share on the host nobody was looking at.
+The senior tester is not distinguished by knowing more exploits, it is by never forgetting the boring step that becomes the critical finding. The unconstrained delegation did not enumerate. The certificate template sysadmin skipped because it was 11pm. The writable share on the host nobody was looking at.
 
-Scripting the enumeration does not replace the operator, it frees the operator. The machine sweeps the subnet, chains the lists, logs every command and rolls up the summary, and I spend my attention on the part that actually needs a human, deciding what the findings *mean* and where the real path to the crown jewels runs. The tool makes sure I never skip the step. The judgement is still mine.
+Scripting the enumeration does not replace the operator, it frees the operator. The machine sweeps the subnet, chains the lists, logs every command and rolls up the summary, and I spend my attention on the part that actually needs a human, deciding what the findings *mean* and where the real path to the crown jewels runs. The tool makes sure I never skip the step. The clunker terminator robot judgment day is still approaching.
 
-> **Get it here:** [Private-Internal-Infra-AD-Pentest-Scripts](https://github.com/botesjuan/Private-Internal-Infra-AD-Pentest-Scripts)
+> **Get it here:** [Internal Infra AD Pentest Automation Scripts](https://github.com/botesjuan/Internal-Infra-AD-Pentest-Scripts)
