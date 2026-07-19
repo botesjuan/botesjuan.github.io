@@ -1,10 +1,10 @@
 ---
 layout: post
-title: "Red Teaming AI: Passing the INE eAIS AI Systems Security Specialist Exam"
+title: "AI & LLM skill up by Passing the INE eAIS AI Systems Security Specialist Exam"
 date: 2026-07-19
 categories: [AI Security, Certification]
 tags: [eais, ine, ai-security, llm, prompt-injection, owasp-llm-top-10, red-team, certification]
-excerpt: "A field guide to INE's eAIS certification — a practical, hands-on exam that drops you into live LLM applications across four business sectors and asks you to attack them, audit them, and validate their controls like a real AI red teamer. What the exam actually tests, the mindset shift, and how to prepare, without spoiling a single answer."
+excerpt: "A overview to INE's eAIS certification, a practical, hands-on exam that drops you into live LLM applications across four business sectors and asks you to attack them, audit them, and validate their controls like a real AI auditor / security analyst. What the exam actually tests, the mindset shift, and how to prepare, without spoilers."
 ---
 
 <style>
@@ -15,17 +15,17 @@ excerpt: "A field guide to INE's eAIS certification — a practical, hands-on ex
   .cyan{ color: #00d4ff; font-weight: bold; }
 </style>
 
-# Red Teaming AI with the <span class="cyan">eAIS</span> Certification
+# AI with the <span class="cyan">eAIS</span> Certification
 
-Every penetration tester has watched large language models bolt themselves onto production systems over the last two years — chatbots wired into databases, agents given tools, retrieval pipelines feeding untrusted documents straight into a model's context. The attack surface is new, the trust boundaries are fuzzy, and most engagement checklists have nothing to say about it. INE's **eAIS — AI Systems Security Specialist** is one of the first certifications that actually makes you *do the work* against this new surface rather than answer trivia about it.
+Every penetration tester has watched large language models grow in production systems over the last two years, chatbots wired into databases, agents given tools, retrieval pipelines feeding untrusted documents straight into a model's context. The AI attack surface is new, the trust boundaries are fuzzy, and most engagement checklists is maturing. INE's **eAIS — AI Systems Security Specialist** is one of the early certifications that actually makes you *do the work* against this new surface practically.
 
-I passed it with an overall score of **<span class="grn">93%</span>**, and this post is the field guide I wish I'd had going in: what the exam really is, the mindset it demands, and how to prepare — with **zero exam spoilers**. Everything here is about *classes* of problems and skills, not answers.
+I passed eAIS with an overall score of **<span class="grn">93%</span>**, and this post is the guide I hope can help others: what the exam test, the mindset it demands, and how to prepare — with **zero exam spoilers**. Everything here is about *classes* of problems and skills, not answers.
 
 ## What the eAIS actually is
 
-The eAIS sits at the end of INE's **AI Systems Security Specialist** learning path — seven courses, roughly 32 hours of video, and a stack of hands-on labs. The exam itself is a **practical lab**, not a multiple-guess theory dump dressed up as rigor. You are handed a Kali machine with network access to a set of live AI applications and their supporting services, and you work through a series of questions that force you to *investigate the real systems* and report what you find.
+The eAIS sits at the AI LLM end of INE's **AI Systems Security Specialist** learning path, seven courses, roughly 32 hours of videos, and a hands-on labs. The exam itself is a **practical lab**, not a multiple-guess theory dump dressed up as rigor. You are handed a Kali machine with network access to a set of live AI applications and their supporting services, and you work through a series of challenges that force you to *investigate and test the real systems* and report your finding with an answer.
 
-The thing that makes it feel like a genuine red-team exam is the framing. You are dropped into **independent scenarios set at different organisations, in different business sectors, each with a different role**. One moment you are a security auditor signing off an internal assistant before go-live; the next you are an independent assessor validating a whistle-blower's complaint against a live platform; then a secure-code reviewer checking whether a team's hardening actually holds. The scenarios are self-contained and can be done in any order — there is no linear "level 1 to level 10," just a shared lab and a set of systems to take apart.
+The thing that makes it feel like a genuine security audit exam is the framing. You are dropped into **independent scenarios set at different organisations, in different business sectors, each with a different role**. One moment you are a security auditor signing off an internal assistant before go-live; the next you are an independent assessor validating a whistle-blower's complaint against a live platform; then a secure-code reviewer checking whether a team's hardening actually holds. The scenarios are self-contained and can be done in any order — there is no linear "level 1 to level 10," just a shared lab and a set of systems to take apart.
 
 Crucially, the questions are not all "exploit this." Some ask you to **attack**, some ask you to **audit**, and some ask you to **validate a control** and decide whether a defence is sound or merely theatrical. That mix is the whole point of the certification.
 
@@ -72,7 +72,7 @@ Strip away the framing and the exam rewards a specific, hands-on toolkit:
 
 The quizzes and the classification questions reward knowing your frameworks by heart:
 
-- **OWASP LLM Top 10** — memorise the IDs, not just the names. Be aware the list was **renumbered between the 2023 and 2025 editions** (for example, what "Insecure Plugin Design" and "Sensitive Information Disclosure" and "Excessive Agency" map to shifts between versions), and a question may use either edition's numbering. Mismatched ID-to-name pairings are a favourite distractor.
+- **OWASP LLM Top 10** — study the IDs, not just the names. Be aware the list was **renumbered between the 2023 and 2025 editions** (for example, what "Insecure Plugin Design" and "Sensitive Information Disclosure" and "Excessive Agency" map to shifts between versions), and a question may use either edition's numbering. Mismatched ID-to-name pairings are a favourite distractor.
 - **MITRE ATLAS** — the adversarial-ML tactics-and-techniques knowledge base, the ATT&CK analogue for AI systems.
 - **OWASP AI Testing Guide** — the assessment methodology and phases.
 - **STRIDE** — for threat-modelling AI features (Spoofing, Tampering, Repudiation, Information disclosure, DoS, Elevation).
@@ -104,11 +104,11 @@ Build this against your own lab first, so by exam day feeding it a fresh target 
 
 ## Where it was hard, and who should take it
 
-My domain split — Foundations <span class="kw">86%</span>, Abuse & Exploitation <span class="kw">90%</span>, Secure Design <span class="grn">100%</span>, Testing & Validation <span class="kw">91%</span>, Safe Operational Use <span class="grn">100%</span> — tells an honest story: the offensive work and the defensive design came naturally, but the **foundational architecture and data-flow reasoning** was the part that made me slow down and think. If you are strong on exploitation, do not skimp on Course 1; understanding *how the system is built* is what lets you predict where it breaks.
+My domain split — Foundations <span class="kw">85%</span>, Abuse & Exploitation <span class="kw">89%</span>, Secure Design <span class="grn">99%</span>, Testing & Validation <span class="kw">90%</span>, Safe Operational Use <span class="grn">99%</span> — tells an honest story: the offensive work and the defensive design came naturally, but the **foundational architecture and data-flow reasoning** was the part that made me slow down and think. If you are strong on exploitation, do not skimp on Course 1; understanding *how the system is built* is what lets you predict where it breaks.
 
-The eAIS is a strong fit for penetration testers and red teamers who want to extend into AI without leaving the practical, hands-on world they are used to — and equally for blue-teamers and AI engineers who want to understand the offensive reality behind the controls they are asked to build. It is one of the few AI-security certifications that puts you in front of a live, misconfigured LLM stack and says *prove it*.
+The eAIS is a strong fit for penetration testers and security analist who want to extend into AI without leaving the practical, hands-on world they are used to — and equally for blue-teamers and AI engineers who want to understand the offensive reality behind the controls they are asked to build. It is one of the few AI-security certifications that puts you in front of a live, misconfigured LLM stack and says *prove it*.
 
-If you are considering the AI/LLM security path, this is a genuinely good place to earn your stripes. Build the lab, break it, learn the fix, and go take it.
+If you are considering the AI/LLM security path, this is a genuinely good place to earn your stripes. Build the lab, break it, learn the fix, and have fun.
 
 > **My AI/LLM security resources:**
 > - [Building a Private LLM Assistant]({% post_url 2026-05-24-private-llm-assistant %}) — the lab that got me exam-ready
