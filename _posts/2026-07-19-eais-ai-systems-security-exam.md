@@ -15,31 +15,40 @@ excerpt: "A overview to INE's eAIS certification, a practical, hands-on exam tha
   .cyan{ color: #00d4ff; font-weight: bold; }
 </style>
 
-# AI with the <span class="cyan">eAIS</span> Certification
+# <span class="cyan">eAIS</span> Certification
 
 Every penetration tester has watched large language models grow in production systems over the last two years, chatbots wired into databases, agents given tools, retrieval pipelines feeding untrusted documents straight into a model's context. The AI attack surface is new, the trust boundaries are fuzzy, and most engagement checklists is maturing. INE's **eAIS — AI Systems Security Specialist** is one of the early certifications that actually makes you *do the work* against this new surface practically.
 
 I passed eAIS with an overall score of **<span class="grn">93%</span>**, and this post is the guide I hope can help others: what the exam test, the mindset it demands, and how to prepare — with **zero exam spoilers**. Everything here is about *classes* of problems and skills, not answers.
 
-## What the eAIS actually is
+## eAIS Exam
 
 The eAIS sits at the AI LLM end of INE's **AI Systems Security Specialist** learning path, seven courses, roughly 32 hours of videos, and a hands-on labs. The exam itself is a **practical lab**, not a multiple-guess theory dump dressed up as rigor. You are handed a Kali machine with network access to a set of live AI applications and their supporting services, and you work through a series of challenges that force you to *investigate and test the real systems* and report your finding with an answer.
 
-The thing that makes it feel like a genuine security audit exam is the framing. You are dropped into **independent scenarios set at different organisations, in different business sectors, each with a different role**. One moment you are a security auditor signing off an internal assistant before go-live; the next you are an independent assessor validating a whistle-blower's complaint against a live platform; then a secure-code reviewer checking whether a team's hardening actually holds. The scenarios are self-contained and can be done in any order — there is no linear "level 1 to level 10," just a shared lab and a set of systems to take apart.
+Exam go into **independent scenarios set at different organisations, in different business sectors, each with a different role**. Multiple roles as a security auditor signing off an internal assistant before go-live; then an independent assessor validating a whistle-blower's complaint against a live platform; next a secure-code reviewer checking whether a team's hardening actually holds. The scenarios are self-contained and can be done in any order — there is no linear "level 1 to level 10," just a shared lab and a set of systems to audit.
 
 Crucially, the questions are not all "exploit this." Some ask you to **attack**, some ask you to **audit**, and some ask you to **validate a control** and decide whether a defence is sound or merely theatrical. That mix is the whole point of the certification.
 
-## The mindset shift: attacker *and* defender *and* engineer
+## Multiple Mindset
 
-If you come from a pure offensive background — as I do — the biggest adjustment is that the eAIS refuses to let you stay in the attacker's chair. The single largest domain on the exam is **Secure AI Design & Controls (30%)**, bigger than exploitation. For every attack you learn, the exam expects you to know the matching control and to recognise when a control is real versus when it just *looks* real.
+If you come from a pure offensive background, the biggest adjustment is that the eAIS refuses to let you stay in the attacker's chair. The single largest domain on the exam is **Secure AI Design & Controls (30%)**, bigger than exploitation. For every attack you learn, the exam expects you to know the matching control and to recognise when a control is real versus when it just *looks* real.
 
 That last part is where a lot of the exam's texture lives. Over and over you meet controls that pattern-match on surface form — a guardrail that blocks a phrase, a filter that recognises one way of writing something, a redactor that catches the obvious format. A red teamer's instinct is exactly the right tool here: reformulate, re-encode, come at it from an angle the pattern never anticipated. Knowing *why* a control is bypassable, and being able to state the correct fix, is what separates a pass from a fail.
 
 The recurring theme that ties every scenario together is **trust boundaries**. User input is untrusted — everyone knows that. The eAIS drills the harder lesson: **retrieved RAG documents, tool outputs, and messages passed between agents are *also* untrusted**, and the moment a system treats any of them as instructions, it is broken. Indirect prompt injection — a payload planted in data the model will later read — is the signature attack of this space, and you need to recognise it in a vector store, in a tool's JSON response, and in a document a user uploaded.
 
-## The five domains, and what each really means
+<figure style="margin:28px 0;text-align:center;">
+  <img src="/assets/images/Gemini_Generated_Image_o69y48o69y48o69y.png" 
+       alt="eAIS AI Systems Security exam concept art" 
+       style="max-width:100%;border:1px solid #0d3a5c;border-left:3px solid #00d4ff;">
+  <figcaption style="font-size:11px;color:#5a8faa;letter-spacing:2px;margin-top:8px;text-transform:uppercase;">
+    // Fig 01 — eAIS Exam Domains
+  </figcaption>
+</figure>
 
-The exam is scored across five weighted domains. Here is what each one is actually testing, in practical terms:
+## Five Domains
+
+The exam is scored across five weighted domains.
 
 **1. AI/LLM Foundations for Security — 15%**
 Can you look at a live LLM application and name its parts — model endpoint, orchestrator, retrieval layer, tools, guardrails — and tell how they are wired together? Can you tell *RAG-based retrieval* apart from *fine-tuning* apart from *base-model* behaviour just by probing the system and reading its logs? You need to be comfortable inspecting a vector store's configuration, tracing where prompts and sensitive data get stored, and reasoning about how embeddings, context windows, and prompt composition change the security picture. This was my lowest domain (<span class="kw">86%</span>) — the architecture and data-flow reasoning is subtle, and worth studying harder than its 15% weight suggests, because everything else builds on it.
@@ -48,7 +57,7 @@ Can you look at a live LLM application and name its parts — model endpoint, or
 The offensive core. Direct prompt injection to override system instructions; **indirect** injection via retrieved content or tool output; exfiltrating system prompts, secrets, and RAG sources through crafted inputs; recognising jailbreak and policy-bypass patterns; spotting tool misuse and over-permissioning in agentic workflows; and understanding resource-exhaustion / "denial-of-wallet" abuse. If you have a red-team background this is your comfort zone, but the *indirect* and *agent-chain* variants are where people who only practised chatbot jailbreaks come unstuck.
 
 **3. Secure AI Design & Controls — 30%**
-The heaviest domain, and the one that makes eAIS more than a jailbreak cert. Least-privilege tool access; parameter validation and fail-closed tool calls; human-in-the-loop gates for high-impact actions; prompt/context separation (system vs developer vs user boundaries); structured-output schemas and validation; hardening RAG with source allowlisting, retrieval filtering, and provenance/citation; secrets handling (redaction, secure storage, never in prompts or logs); safe logging; and abuse-prevention controls like rate limiting and quotas. You must be able to *pick the correct control for a given attack* and spot the incomplete fix. I scored <span class="grn">100%</span> here, and I credit that entirely to having spent time on the defensive side, not just breaking things.
+The heaviest domain, and the one that makes eAIS more than a jailbreak cert. Least-privilege tool access; parameter validation and fail-closed tool calls; human-in-the-loop gates for high-impact actions; prompt/context separation (system vs developer vs user boundaries); structured-output schemas and validation; hardening RAG with source allowlisting, retrieval filtering, and provenance/citation; secrets handling (redaction, secure storage, never in prompts or logs); safe logging; and abuse-prevention controls like rate limiting and quotas. You must be able to *pick the correct control for a given attack* and spot the incomplete fix. I scored <span class="grn">99%</span> here, and I credit that entirely to having spent time on the defensive side, not just breaking things.
 
 **4. AI Security Testing & Validation — 20%**
 The methodology domain. Execute a basic LLM app test plan covering injection, leakage, retrieval, and tool misuse; capture reproducible evidence (logs, prompts, outputs, configs); document findings with impact, severity, and actionable remediation; **validate mitigations through regression testing**; perform a lightweight threat model (assets, entry points, trust boundaries, abuse cases) using something like STRIDE; and identify residual risk where a full fix is not feasible. Expect to be shown a "fixed" system and asked whether the fix actually closed the finding — regression discipline matters.
@@ -56,7 +65,7 @@ The methodology domain. Execute a basic LLM app test plan covering injection, le
 **5. Safe Operational Use in IT/Security & SDLC — 10%**
 The governance-and-ops domain. Using AI safely inside automation and the SDLC (review gates, diffs, rollback plans, secrets hygiene); applying data classification so restricted data never reaches an external model; and safe AI patterns in SOC/ops work (verify-before-act, analyst validation, audit trails). Smaller weight, mostly common sense *with the right terminology* — but it leans on reviewing AI-*generated* code and config, where "it looks right" and "it is safe to run" are very different things.
 
-## The practical skills you will actually use
+## Practical Skills Tested
 
 Strip away the framing and the exam rewards a specific, hands-on toolkit:
 
@@ -68,7 +77,7 @@ Strip away the framing and the exam rewards a specific, hands-on toolkit:
 - **Control evaluation.** Probing a guardrail, a DLP redactor, or an output filter with reformulated inputs to prove whether it holds or gives false assurance.
 - **Threat modelling and framework mapping.** Classifying a finding to the right OWASP LLM entry, STRIDE category, or NIST AI RMF function — and knowing the difference between a finding's *impact* and its *root cause*.
 
-## Frameworks to know cold
+## Frameworks 
 
 The quizzes and the classification questions reward knowing your frameworks by heart:
 
@@ -78,16 +87,16 @@ The quizzes and the classification questions reward knowing your frameworks by h
 - **STRIDE** — for threat-modelling AI features (Spoofing, Tampering, Repudiation, Information disclosure, DoS, Elevation).
 - **NIST AI RMF** — its four functions **GOVERN · MAP · MEASURE · MANAGE**, and which one owns policy versus context versus measurement versus mitigation. Matching a finding's *root cause* to the right function is a recurring question shape.
 
-## How to prepare
+## Preparations
 
-1. **Build a private LLM lab and break it yourself.** Nothing substitutes for standing up a local model, wrapping it in a RAG pipeline and a couple of tools, and then attacking your own creation. I wrote up my own build in a separate post — [Building a Private LLM Assistant]({% post_url 2026-05-24-private-llm-assistant %}) — and it was the single most valuable piece of prep. When you have wired the orchestrator, the vector store, and the tool loop yourself, you *know* where the trust boundaries are because you built (and forgot to defend) them.
+1. **Build a private LLM lab and secure it.** Nothing substitutes for standing up a local model, wrapping it in a RAG pipeline and a couple of tools, and then attacking your own creation. I wrote up my own build in a separate post — [Building a Private LLM Assistant]({% post_url 2026-05-24-private-llm-assistant %}) — and it was the single most valuable piece of prep. When you have wired the orchestrator, the vector store, and the tool loop yourself, you *know* where the trust boundaries are because you built (and forgot to defend) them.
 2. **Live in the API.** Practise talking to LLM apps with `curl` and `jq` until reading a schema and shaping a request body is muscle memory. Learn to pull an OpenAPI document and enumerate from it.
 3. **Practise both sides of every attack.** For each injection, jailbreak, or exfiltration technique, write down the control that stops it and the *incomplete* version of that control that only looks like it works. The 30% design domain rewards this directly.
-4. **Drill the frameworks.** Make flashcards for the OWASP LLM Top 10 (both editions' numbering), the NIST RMF functions, and STRIDE letters. These are the fastest points on the exam.
+4. **Use the frameworks.** Make flashcards for the OWASP LLM Top 10 (both editions' numbering), the NIST RMF functions, and STRIDE letters. These are the fastest points on the exam.
 5. **Keep an AI-security methodology.** I fold my prompts, payloads, enumeration commands, and control-evaluation technique notes into the AI/LLM section of my public methodology repo so they are ready under exam pressure rather than invented on the day: [PenTestMethodology → sections/ai_llm.md](https://github.com/botesjuan/PenTestMethodology/blob/master/sections/ai_llm.md).
-6. **Rehearse evidence capture.** The exam is practical, and so is real AI red teaming — practise capturing clean, reproducible evidence (the request, the response, the config, the log line) as you go.
+6. **Evidence logging.** The exam is practical, and so is real AI red teaming — practise capturing clean, reproducible evidence (the request, the response, the config, the log line) as you go.
 
-## Automate the deterministic part, keep the thinking for yourself
+## Automate the deterministic part
 
 The single most useful thing I built in preparation was not an exploit — it was a **generic audit harness**. It takes two inputs, exactly the way you'd feed a scope file to any recon tool: a list of target service URLs, and an optional wordlist. It then **fingerprints each target and runs only the checks that fit** — because an AI application stack is really a handful of recognisable component types wired together:
 
@@ -102,9 +111,9 @@ None of that *answers* the questions for you — and that is the whole point. Th
 
 Build this against your own lab first, so by exam day feeding it a fresh target and reading its output is second nature. It is also exactly how these assessments work on real engagements: tooling gathers the evidence, the human decides what it means.
 
-## Where it was hard, and who should take it
+## Strength & Weakness
 
-My domain split — Foundations <span class="kw">85%</span>, Abuse & Exploitation <span class="kw">89%</span>, Secure Design <span class="grn">99%</span>, Testing & Validation <span class="kw">90%</span>, Safe Operational Use <span class="grn">99%</span> — tells an honest story: the offensive work and the defensive design came naturally, but the **foundational architecture and data-flow reasoning** was the part that made me slow down and think. If you are strong on exploitation, do not skimp on Course 1; understanding *how the system is built* is what lets you predict where it breaks.
+Foundations <span class="kw">85%</span>, Abuse & Exploitation <span class="kw">89%</span>, Secure Design <span class="grn">99%</span>, Testing & Validation <span class="kw">90%</span>, Safe Operational Use <span class="grn">99%</span> — tells an honest story: the offensive work and the defensive design came naturally, but the **foundational architecture and data-flow reasoning** was the part that made me slow down and think. If you are strong on exploitation, do not skimp on Course 1; understanding *how the system is built* is what lets you predict where AI LLM systems architecture breaks.
 
 The eAIS is a strong fit for penetration testers and security analist who want to extend into AI without leaving the practical, hands-on world they are used to — and equally for blue-teamers and AI engineers who want to understand the offensive reality behind the controls they are asked to build. It is one of the few AI-security certifications that puts you in front of a live, misconfigured LLM stack and says *prove it*.
 
