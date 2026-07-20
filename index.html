@@ -406,7 +406,7 @@
   (function(){
     var code = 'botesjuan'; // goatcounter.com site code
     var el = document.getElementById('vc-count');
-    if (!el || code === 'botesjuan') return; // skip fetch until configured
+    if (!el) return;
     fetch('https://' + code + '.goatcounter.com/counter/TOTAL.json')
       .then(function(r){ return r.json(); })
       .then(function(d){ if (d && d.count) el.textContent = d.count; })
