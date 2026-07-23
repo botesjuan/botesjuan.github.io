@@ -417,14 +417,16 @@ excerpt: "How I am building a fully offline LLM assistant for penetration testin
 
 <div class="llm-post">
 
-<p class="post-intro">A fully private, GPU-accelerated AI security assistant running on dedicated local hardware —
-no cloud dependency, no data leakage, full tool execution capability for professional penetration testing engagements.</p>
+<p class="post-intro">A fully private, GPU-accelerated AI security assistant for a single authorized operator, running on
+dedicated local hardware — no cloud dependency, no cloud token costs, no data leakage. The primary focus is
+<code>llmctl</code>, a CLI binary that runs unconstrained, uncensored, human-in-the-loop security assessments from the
+operator's own host.</p>
 
 <div class="meta">
   <span>Juan Botes — Senior Penetration Tester</span>
   <span>Cape Town, South Africa</span>
   <span>Published May 2026 · Updated July 2026</span>
-  <span>Status: Phases 01–07 live · Agent mode end-to-end · CLI binary live · llmctl local exec live</span>
+  <span>Status: single-operator · llmctl v1.3.2 live · local tool exec + evidence capture · hermes4:14b @ 32K context</span>
 </div>
 
 <h2><span class="num">01 //</span> Project Goal</h2>
@@ -434,13 +436,22 @@ no cloud dependency, no data leakage, full tool execution capability for profess
 edits files, and chains tool output into further decisions — but running entirely on local hardware
 with a private LLM as the backend. Zero API costs. Zero data leaving the network.</p>
 
-<p>This project has three primary deliverables:</p>
+<p>The project is refocused around one primary deliverable, with two supporting ones — all for a
+<strong style="color:#fff">single authorized operator</strong> (me); no multi-user, no public sign-up:</p>
 
 <ul>
-  <li><strong style="color:#fff">Private CLI Agent</strong> — A terminal client on the Ubuntu desktop that connects to the private LLM backend and can execute commands, edit files, and run pentest tools autonomously based on natural language prompts.</li>
-  <li><strong style="color:#fff">Enhanced Web Frontend</strong> — Upgrade the existing <code>llm_prompt.php</code> web app on groupservice.co.za to support file upload, image upload, image-to-text, and (future) text-to-image using the private LLM backend.</li>
-  <li><strong style="color:#fff">Private LLM Backend</strong> — A dedicated headless Ubuntu Server node with GPU-accelerated inference, persistent memory, and a sandboxed tool execution environment for security tooling.</li>
+  <li><strong style="color:#fff">Private CLI Agent — <code>llmctl</code> (primary focus)</strong> — a static Go terminal binary that runs from any Linux host, reasons over a goal, proposes shell commands, executes them locally on the host it runs from (reading and writing files in the working directory), feeds tool output back into the loop, and iterates — unconstrained, uncensored, with human-in-the-loop approval on every command, and no cloud token costs.</li>
+  <li><strong style="color:#fff">Private LLM Backend — dedicated model compute</strong> — a headless GPU node whose sole job is now serving the model (Ollama + <code>hermes4:14b</code> at 32K context) that powers the CLI's reasoning loop. Nothing leaves the LAN.</li>
+  <li><strong style="color:#fff">Web portal — general chat only</strong> — the existing web app remains a private conversational chat interface for the single operator; it does not do tool calling.</li>
 </ul>
+
+<div class="callout improvement">
+  <div class="callout-label">▶ current focus</div>
+  Development has shifted to <strong style="color:#fff">enhancing the <code>llmctl</code> CLI binary</strong> to deliver
+  unconstrained security assessment — <strong style="color:#fff">no blockers, uncensored, human-in-the-loop control on
+  every command, and zero cloud token costs</strong>. The GPU node is now dedicated model compute serving that loop;
+  the web portal stays as general chat for the single operator.
+</div>
 
 <h2><span class="num">02 //</span> System Architecture</h2>
 
@@ -577,11 +588,11 @@ the tool</em>, while <code>llmctl chat</code> means <em>the local Kali workstati
 <h3>LLM Backend Services</h3>
 <div class="code-block" data-lang="stack">
 <code><span class="c-green">LLM Runtime</span>
-  Ollama                    <span class="c-dim"># GPU-accelerated model serving</span>
+  Ollama 0.32.1             <span class="c-dim"># GPU-accelerated model serving · q8_0 KV cache · flash-attn</span>
   OLLAMA_BASE_URL           <span class="c-amber">http://&lt;gpu-node&gt;:11434</span>   <span class="c-dim"># LAN only</span>
 
 <span class="c-green">Active Models</span>
-  hermes4:14b               <span class="c-dim"># DEFAULT — Hermes 4 (Qwen3-14B base) · ~30 tok/s · 100% GPU @ 16K · tools + reasoning</span>
+  hermes4:14b               <span class="c-dim"># DEFAULT — Hermes 4 (Qwen3-14B base) · 30.3 tok/s · 100% GPU @ 32K (q8_0 KV) · tools + reasoning</span>
   hermes3:8b                <span class="c-dim"># previous default — agentic discipline + function calling, steerable</span>
   llama3.1:8b               <span class="c-dim"># clean native tool-calls, fast</span>
   qwen2.5:14b               <span class="c-dim"># stronger general reasoning</span>
@@ -635,7 +646,7 @@ than kept as standalone update banners:</p>
   <li>Web portal multiple persistent conversations sidebar and single authorised operator.</li>  
   <li><code>llmctl</code> LLM Control terminal tool in Go code, authenticating with a per-user API bearer
   token, integrated with public API <code>llm_api.php</code> at web portal.</li>
-  <li>Default tool-calling model upgraded to <code>hermes4:14b</code> (Nous Hermes 4, Qwen3-14B base) — ~30 tok/s, 100% on the 16GB GPU at 16K context, verified end-to-end on an authorized live target.</li>
+  <li>Default tool-calling model upgraded to <code>hermes4:14b</code> (Nous Hermes 4, Qwen3-14B base) — 30.3 tok/s, 100% on the 16GB GPU at 32K context (q8_0 KV cache), verified end-to-end on an authorized live target.</li>
   <li><code>llmctl chat</code> added a local plan/act/observe mode: a stepwise planner proposes one
   command at a time and nothing executes until it's explicitly approved human-in-the-loop,
   plus multi-turn context, encrypted local history, named config profiles, session resume, and 
@@ -703,7 +714,7 @@ than kept as standalone update banners:</p>
     <div class="goal-num">07c</div>
     <div class="goal-text">
       <strong>Dynamic command execution + guardrails</strong>
-      <span>Single <code>execute_command</code> tool · model authors command · any tool (install if missing) · destructive denylist + non-root sandbox · scope as guidance</span>
+      <span>Single <code>execute_command</code> tool · model authors command · any tool (install if missing) · destructive denylist + non-root sandbox</span>
     </div>
     <span class="status done">✓ DONE</span>
   </div>
@@ -711,7 +722,7 @@ than kept as standalone update banners:</p>
     <div class="goal-num">07d</div>
     <div class="goal-text">
       <strong>Authorized-engagement system prompt (anti-refusal steering)</strong>
-      <span>Persona prepended in <code>llm_api.php</code> so security-strict models don't refuse authorized pentest prompts · reinforces scope discipline</span>
+      <span>Persona prepended in <code>llm_api.php</code> so security-strict models don't refuse authorized pentest prompts · keeps the model on-task</span>
     </div>
     <span class="status done">✓ DONE</span>
   </div>
@@ -759,7 +770,7 @@ than kept as standalone update banners:</p>
     <div class="goal-num">09d</div>
     <div class="goal-text">
       <strong>Private CLI Agent binary — <code>llmctl</code></strong>
-      <span>Static Go binary · per-user API bearer token (admin-issued, argon2id-hashed, additive to session/MFA auth) · tested end-to-end against production · now being extended to read local scope/context files from the directory it's executed in, so status stays open until that lands</span>
+      <span>Static Go binary · per-user API bearer token (admin-issued, argon2id-hashed, additive to session/MFA auth) · tested end-to-end against production · now v1.3.2 with local plan/act/observe execution, per-tool evidence capture, and bounded observations</span>
     </div>
     <span class="status active">▷ IN PROGRESS</span>
   </div>
@@ -772,68 +783,60 @@ than kept as standalone update banners:</p>
     <span class="status done">✓ DONE</span>
   </div>
   <div class="goal">
-    <div class="goal-num">09f</div>
-    <div class="goal-text">
-      <strong>Dynamic scope update for conversations</strong>
-      <span>Let scope be updated live, per conversation, instead of a static global <code>scope.yaml</code> · reads the local scope/notes context from wherever <code>llmctl</code> is executed, so engagement scope changes mid-session without a restart</span>
-    </div>
-    <span class="status active">▷ IN PROGRESS</span>
-  </div>
-  <div class="goal">
     <div class="goal-num">09g</div>
     <div class="goal-text">
       <strong><code>llmctl /init</code> — ingest local engagement files as context</strong>
-      <span>CLI command reads the <code>.md</code> / <code>.txt</code> / <code>.json</code> files in the folder where the binary runs · seeds scope, notes and target context into the session, Function-Code-style</span>
+      <span>CLI command reads the <code>.md</code> / <code>.txt</code> / <code>.json</code> files in the folder where the binary runs · seeds engagement notes and target context into the session, Function-Code-style</span>
     </div>
     <span class="status active">▷ IN PROGRESS</span>
   </div>
   <div class="goal">
     <div class="goal-num">09b</div>
     <div class="goal-text">
-      <strong>Web frontend upgrade — file + image upload</strong>
-      <span>llm_prompt.php enhanced · File upload · Image upload · Image-to-text via LLM backend</span>
+      <strong>Web portal upgrade — file + image upload (parked)</strong>
+      <span>File/image upload &amp; image-to-text in <code>llm_prompt.php</code> — parked. The web portal stays a general-chat interface for me alone; effort is on the CLI binary instead.</span>
     </div>
-    <span class="status planned">◻ PLANNED</span>
+    <span class="status planned">⏸ PARKED</span>
   </div>
   <div class="goal">
     <div class="goal-num">09c</div>
     <div class="goal-text">
-      <strong>New-user registration &amp; approval workflow</strong>
-      <span>Self-service request → admin approval → MFA enrol · default-deny · Agent mode admin-only · System prompt set per user</span>
+      <strong>Multi-user registration &amp; approval (parked)</strong>
+      <span>Parked — this is a personal, single-operator assistant built for me. No public sign-up, no new-user registration. Kept only as a note if that ever changes.</span>
     </div>
-    <span class="status future">◈ FUTURE</span>
+    <span class="status planned">⏸ PARKED</span>
   </div>
   <div class="goal">
     <div class="goal-num">09h</div>
     <div class="goal-text">
-      <strong>Admin-set per-user persona / system prompt</strong>
-      <span>Admin portal sets each registered user's system-prompt context and what their assistant will/won't do · per-user data model in place · admin UI still to build</span>
+      <strong>Per-user persona / system prompt (parked)</strong>
+      <span>Parked with multi-user — a single operator needs no per-user personas. My own assistant persona is set directly in the system prompt.</span>
     </div>
-    <span class="status future">◈ FUTURE</span>
+    <span class="status planned">⏸ PARKED</span>
   </div>
   <div class="goal">
     <div class="goal-num">10</div>
     <div class="goal-text">
-      <strong>Text-to-image Generation</strong>
-      <span>Stable Diffusion / ComfyUI on RTX 4060 Ti · Integrated into web frontend</span>
+      <strong>Text-to-image generation (parked)</strong>
+      <span>Parked — a web-portal nicety (Stable Diffusion / ComfyUI on the RTX 4060 Ti), outside the CLI security-assessment focus.</span>
     </div>
-    <span class="status future">◈ FUTURE</span>
+    <span class="status planned">⏸ PARKED</span>
   </div>
   <div class="goal">
     <div class="goal-num">11</div>
     <div class="goal-text">
       <strong>Model Expansion</strong>
-      <span>Default moved from <code>hermes3:8b</code> to <code>hermes4:14b</code> (still 100% GPU, no offload needed at 14B). Ongoing research: use the motherboard's full 64GB system memory to run models larger than GPU VRAM — partial CPU offload, MoE expert offload, KV-cache quantization — held pending the arrival of lower-cost AI/LLM inference hardware.</span>
+      <span>Default moved from <code>hermes3:8b</code> to <code>hermes4:14b</code>, now at 32K context (100% GPU via q8_0 KV cache — 32K is the max that stays fully on the 16GB card; 40K and 24K-f16 spill). Ongoing research: use the motherboard's full 64GB system memory to run models larger than GPU VRAM — partial CPU offload, MoE expert offload, KV-cache quantization — held pending the arrival of lower-cost AI/LLM inference hardware.</span>
     </div>
     <span class="status active">▷ IN PROGRESS</span>
   </div>
   <div class="goal">
     <div class="goal-num">12</div>
     <div class="goal-text">
-      <strong>Concurrent Multi user Simultaneous Support vLLM</strong>
-      <span>vLLM migration + OpenAI-compatible API layer + Better batching · Full tool-call spec · Multi-client support</span>
+      <strong>Multi-user concurrency — vLLM (parked)</strong>
+      <span>Parked — a single operator doesn't need concurrent multi-client serving. A vLLM migration for throughput and a stricter tool-call spec may be revisited later, but multi-user support is not a goal.</span>
     </div>
-    <span class="status future">◈ FUTURE</span>
+    <span class="status planned">⏸ PARKED</span>
   </div>
   <div class="goal">
     <div class="goal-num">13</div>
@@ -847,7 +850,7 @@ than kept as standalone update banners:</p>
     <div class="goal-num">14</div>
     <div class="goal-text">
       <strong>Architecture Enhance Research</strong>
-      <span>General Architecture Improvements: Model training, RAG, tighter scope control, integrating open-source tools directly into the orchestration layer, more API functionality per architecture component, and controlling data trust boundaries between the various APIs' input and output</span>
+      <span>General Architecture Improvements: Model training, RAG, integrating open-source tools directly into the orchestration layer, more API functionality per architecture component, and controlling data trust boundaries between the various APIs' input and output</span>
     </div>
     <span class="status active">▷ IN PROGRESS</span>
   </div>
@@ -870,7 +873,7 @@ the sandbox first — no Python code changes.</p>
   │                            │  POST /run  (X-API-Key, LAN only)
   ▼                            ▼
 <span class="c-cyan">agent.py  (ReAct loop)</span>  ◄── orchestrator_api.py
-  │   system prompt injects available-tool hints + scope guidance
+  │   system prompt injects available-tool hints
   ├─ sends goal to <span class="c-amber">http://&lt;gpu-node&gt;:11434/api/chat</span>
   │
   ▼
@@ -884,7 +887,6 @@ the sandbox first — no Python code changes.</p>
   ├── shlex → argv, run directly (never sh -c)
   ├── any tool allowed — not in the sandbox? <span class="c-cyan">shell_install</span> <span class="c-dim"># ready next turn</span>
   ├── per-tool deny_flags  +  destructive denylist  <span class="c-dim"># don't destroy the host</span>
-  ├── <span class="c-amber">scope.yaml</span> hosts used as <span class="c-dim">guidance, not a hard block</span>
   └── docker run pentest-tools:latest  <span class="c-dim"># non-root, cap-drop ALL</span>
   │
   ▼
@@ -915,8 +917,7 @@ of agentic pentest tooling — not a hypothetical.</p>
   <li><strong style="color:#fff">No arbitrary shell.</strong> Commands are rejected outright if they contain <code>;</code>, redirection (<code>&gt; &lt;</code>), or command substitution (<code>` </code>/<code>$(...)</code>) — those stay structurally impossible. <code>&amp;&amp;</code> (sequencing) and <code>|</code> (piping) <em>are</em> permitted, relaxed on 2026-06-19 for this single-operator context so the model can combine tools in one step (e.g. <code>whatweb … &amp;&amp; sslscan …</code>, <code>curl &lt;target&gt; | html2text</code>) — but every stage is still <code>shlex</code>-split into its argv list and run directly, never via <code>sh -c</code>, and <strong style="color:#fff">each stage is independently re-screened</strong> against the safety floor (deny-flags + destructive denylist) before any stage of the chain runs — one failing stage blocks the whole chain. This is host-hygiene, not a tool restriction: it stops destruction and shell tricks, not the model's choice of tool.</li>
   <li><strong style="color:#fff">No tool allowlist — any tool the job needs.</strong> This is a single-operator tool for authorized engagements, so the model is free to pick the best tool and run it, unrestricted. If a tool isn't already baked into the sandbox image, the model is told to propose it for installation (<code>shell_install</code> via <code>apt</code>&nbsp;/&nbsp;<code>pip</code>&nbsp;/&nbsp;<code>pipx</code>&nbsp;/&nbsp;<code>go install</code>&nbsp;/&nbsp;<code>git clone</code>) and it's available from the next prompt on. There is no <code>tools.yaml</code> gate standing between the model and a binary.</li>
   <li><strong style="color:#fff">Per-tool deny-flags + a destructive denylist.</strong> Specific dangerous flags are blocked even on allowed tools; a defence-in-depth screen catches <code>rm -rf</code>, <code>mkfs</code>/<code>dd</code>, <code>shutdown</code>, fork bombs, <code>DROP TABLE</code>, <code>curl | bash</code>, etc.</li>
-  <li><strong style="color:#fff">Scope as guidance, not a hard wall.</strong> The engagement's targets — a web application, an internal subnet — are given to the model as <em>scope guidance</em> it's told to stay within, stated in the opening prompt or read from a local <code>scope.yaml</code>/notes file, rather than enforced as a fail-closed egress block. That's deliberate: it keeps the assistant flexible across engagements where scope shifts mid-session (see §05, goal 09f). The hard structural exfil wall is intentionally traded away for usability — on the understanding that only the trusted operator can trigger tool execution in the first place.</li>
-  <li><strong style="color:#fff">Tool execution is operator-only — the real trust boundary.</strong> Agent mode, the only path that runs commands, is gated to me (the admin) alone. Every other account on the portal gets plain private chat with <strong style="color:#fff">no tool calling at all</strong>, so the relaxed tool/scope posture above only ever applies to a single authorized, MFA'd principal — not to arbitrary users.</li>
+  <li><strong style="color:#fff">Tool execution is operator-only — the real trust boundary.</strong> Agent mode, the only path that runs commands, is gated to me (the admin) alone. Every other account on the portal gets plain private chat with <strong style="color:#fff">no tool calling at all</strong>, so the relaxed tool posture above only ever applies to the single authorized, MFA'd operator — not to arbitrary users.</li>
   <li><strong style="color:#fff">Runaway controls.</strong> Max steps, max tool executions, a wall-clock time budget, and duplicate-command detection stop loops from spinning.</li>
   <li><strong style="color:#fff">Sandbox by default.</strong> The Orchestrator API forces container execution; there is no host-RCE path on the public route.</li>
 </ul>
@@ -937,17 +938,29 @@ impossible — so the defence is layered instead. Tool output is always re-frame
 the destructive-command denylist and non-root sandbox stop anything from damaging the host or container;
 Agent mode is <strong style="color:#fff">operator-only</strong>, so no other user can trigger a tool run;
 and on the <code>llmctl chat</code> path every single command needs my explicit approval before it executes
-(see §08). Prompt-level scope guidance tells the model to stay on-target, but I treat it as steering, not a
-wall — the honest posture for a single-operator tool where I am the one reading every result.</p>
+(see §08) — the honest posture for a single-operator tool where I am the one reading every result.</p>
 
 <h2><span class="num">08 //</span> Changes, Progress &amp; Improvements</h2>
+
+<h3>Latest — llmctl v1.3.2 · Ollama 0.32.1 · 32K context · evidence capture</h3>
+<p><strong style="color:#fff">Update (2026-07):</strong> the CLI is now <strong style="color:#fff">llmctl v1.3.2</strong>
+on <strong style="color:#fff">Ollama 0.32.1</strong>, with <code>hermes4:14b</code> raised to a
+<strong style="color:#fff">32K context</strong> — the largest that stays 100% on the 16&nbsp;GB GPU, unlocked by enabling
+<strong style="color:#fff">q8_0 KV-cache quantization</strong> (~14&nbsp;GB, 30.3 tok/s; 40K and 24K-f16 both spill to CPU).
+Two CLI features landed. <strong style="color:#fff">Per-tool evidence capture</strong>: every executed command's full
+output is appended to <code>tools/&lt;tool&gt;/&lt;tool&gt;.log</code> in the working directory as chain-of-custody evidence.
+And a <strong style="color:#fff">bounded-observation</strong> fix, prompted by a real crash — a verbose <code>sqlmap</code>
+run emitted 4.47&nbsp;MB, which was fed back as a single observation and overflowed the model's context, breaking the
+loop. Now the full output is still saved to evidence, but only a bounded head+tail slice (<code>--max-obs-bytes</code>)
+is fed back to the model, so the loop stays fast and never overflows. The per-command human-in-the-loop confirm now
+defaults to yes-on-Enter while still failing closed on a broken input stream.</p>
 
 <h3>Model Selection — upgraded to hermes4:14b</h3>
 <p><strong style="color:#fff">Update (2026-07):</strong> the default is now
 <strong style="color:#fff">hermes4:14b</strong> — Nous <strong style="color:#fff">Hermes 4 14B</strong>
 (Qwen3-14B base, Q4_K_M GGUF), replacing the long-standing <code>hermes3:8b</code>. It benchmarks at
-<strong style="color:#fff">~30 tokens/sec</strong>, runs <strong style="color:#fff">100% on the 16&nbsp;GB
-GPU</strong> at 16K context (~13.7&nbsp;GB, no CPU offload needed), and passed a live agent tool-call
+<strong style="color:#fff">30.3 tokens/sec</strong>, runs <strong style="color:#fff">100% on the 16&nbsp;GB
+GPU</strong> at 32K context (~14&nbsp;GB with q8_0 KV cache, no CPU offload needed), and passed a live agent tool-call
 test against an authorized target with clean ReAct discipline. Its Qwen3 reasoning is chatty in plain
 chat but does not disrupt the tool loop. The bake-off history below is what led here.</p>
 <p>The original uncensored Gemma model was great for unrestricted output but weak at agentic discipline.
@@ -955,7 +968,7 @@ The prior default <strong style="color:#fff">hermes3:8b</strong> (NousResearch H
 won an earlier tool-calling smoke test — strong function-calling and instruction-following, steerable,
 100% on the GPU at 16K context (~10&nbsp;GB). Findings from that bake-off:</p>
 <ul>
-  <li><strong style="color:#fff">hermes4:14b</strong> — <em>current default.</em> Hermes 4 (Qwen3-14B base) at Q4_K_M; still 100% GPU at 16K (~13.7&nbsp;GB), ~30 tok/s, tools + reasoning, clean ReAct in the orchestrator.</li>
+  <li><strong style="color:#fff">hermes4:14b</strong> — <em>current default.</em> Hermes 4 (Qwen3-14B base) at Q4_K_M; 100% GPU at 32K context (~14&nbsp;GB with q8_0 KV cache), 30.3 tok/s, tools + reasoning, clean ReAct in the orchestrator.</li>
   <li><strong style="color:#fff">hermes3:8b</strong> — previous default; runs only the requested command, no stray tools, no refusals on authorized prompts. Best loop discipline of the 8B class.</li>
   <li><strong style="color:#fff">llama3.1:8b</strong> — cleanest native Ollama <code>tool_calls</code>, fast.</li>
   <li><strong style="color:#fff">qwen2.5:14b</strong> — more capable reasoning, native tool-calls, but at 16K context it spills past 16&nbsp;GB VRAM into CPU offload and gets slow.</li>
@@ -979,8 +992,7 @@ won an earlier tool-calling smoke test — strong function-calling and instructi
 <p>A private assistant is only as good as what security vulnerabilities it can identify. To measure and validate the agent
 end-to-end Tests against <strong style="color:#fff">Gin &amp; Juice Shop</strong>
 (<a href="https://ginandjuice.shop" target="_blank">ginandjuice.shop</a>) — PortSwigger's deliberately
-vulnerable, publicly authorized practice site, is listed in the orchestrator's
-<code>scope.yaml</code>. It publishes its intended vulnerability set and test credentials
+vulnerable, publicly authorized practice site. It publishes its intended vulnerability set and test credentials
 (<code>carlos</code> / <code>hunter2</code>) at
 <a href="https://ginandjuice.shop/vulnerabilities" target="_blank">/vulnerabilities</a>, so that list
 becomes a <strong style="color:#fff">ground-truth answer key</strong>: Scrorecard the assistant
@@ -1096,7 +1108,7 @@ model still reasons and proposes commands, but <em>local host</em> runs the tool
 <span class="c-cyan">client_agent.py  (stepwise planner — no Docker, no execute_command)</span>
   │   proposes ONE command, then STOPS and hands control back
   │   defence-in-depth only: reuses tools.py's destructive-denylist
-  │   (destructive proposals auto-blocked before you see them · scope is advisory)
+  │   (destructive proposals auto-blocked before you see them)
   ▼
 <span class="c-amber">you</span>  ── Run it? [y]es / [n]o / [e]dit / [a]bort ──
   │   only an explicit y/yes runs anything; blank/EOF/anything else declines (fail-closed)
@@ -1113,8 +1125,8 @@ POST /client_agent=step {session_id, observation}
 <p>The trust model is the opposite of the sandbox path on purpose. There is no container here — the
 operator's explicit approval of <strong style="color:#fff">every single command</strong> is the
 control, Human-In-The-Loop before running a tool. The destructive-command denylist is still applied
-before a proposal ever reaches me, as defence-in-depth, and scope is passed to the model as advisory
-guidance — but the human approval is the primary gate here, not a hard allowlist.</p>
+before a proposal ever reaches me, as defence-in-depth — but the human approval is the primary gate
+here, not a hard allowlist.</p>
 
 <div class="callout">
   <div class="callout-label">⚠ Bug caught during validation — "no input" silently meant "yes"</div>
@@ -1142,7 +1154,7 @@ the body, to my OOB capture host" ran exactly as designed — the model wrote th
 command, I approved it, it executed on my real workstation, and the request landed on
 <code>webhook_dashboard.php</code> on my OOB capture host (<code>hoster.groupservice.co.za</code>). The
 model proposed the <code>curl</code>, I approved it at the confirm prompt, and it ran on my real
-workstation — no allowlist and no hard scope check standing in the way, exactly the unrestricted
+workstation — no allowlist standing in the way, exactly the unrestricted
 single-operator flow this design is meant to give me.</p>
 
 <h2><span class="num">09 //</span> Learning Integration — Anthropic Academy</h2>
@@ -1195,8 +1207,7 @@ building and reviewing agentic systems like this one.</p>
   <li>Verify the admin portal's token generate/rotate/revoke buttons end-to-end in a real browser/MFA session.</li>
   <li>Keep the destructive-command denylist in sync between the <code>llmctl chat</code> client path and the sandbox path.</li>
   <li>Ingest real pentest notes, CVE feeds, and past engagement reports into long-term memory.</li>
-  <li>Build the vetted new-user registration &amp; approval flow — default-deny, admin-only Agent mode at first.</li>
-  <li>Upgrade the web frontend with file/image upload and image-to-text.</li>
+  <li><em>(Parked)</em> Multi-user features — new-user registration/approval and the web-portal file/image upload &amp; image-to-text — are on hold. This is a personal single-operator assistant; the web portal stays general-chat only (see §05).</li>
   <li>Default upgraded to <code>hermes4:14b</code> (done). Continue the architecture-enhance research into running models <em>larger than GPU VRAM</em> off the motherboard's full 64GB system memory — partial CPU offload, MoE expert offload, KV-cache quantization — held pending lower-cost inference hardware.</li>
   <li><strong style="color:#fff">Measure &amp; validate the assistant</strong> against <a href="https://ginandjuice.shop/vulnerabilities" target="_blank">Gin &amp; Juice Shop</a>'s published vulnerability set (SQLi, XSS, XXE, prototype pollution, open redirect, vulnerable JS deps) as ground truth — build a per-category test-prompt suite and a repeatable pass/fail scorecard to catch model/architecture regressions.</li>
   <li>Add a PII/POPIA data-sanitisation layer before any real client data reaches the backend.</li>
@@ -1237,8 +1248,7 @@ single 16&nbsp;GB consumer GPU.</p>
 <p>This teaches the model <strong style="color:#fff">how to think about tool selection</strong>, not just which
 tools to call. The model is free to reason about — and run — <em>any</em> tool, installing it first if it isn't
 present. The deterministic layer that stays in the orchestrator dispatcher is a safety floor, not a tool
-restriction: destructive-command screening plus the non-root sandbox so nothing can damage the host. Scope is
-handed to the model as guidance rather than a hard egress gate.</p>
+restriction: destructive-command screening plus the non-root sandbox so nothing can damage the host.</p>
 
 <h3>Base model selection — on constrained hardware</h3>
 
@@ -1286,8 +1296,7 @@ engagement type passed at session start routes to the appropriate specialist:</p
 
 <p>The tool schema exposed to the specialists registers two primitives. The dispatcher's safety floor —
 destructive-command screening plus the non-root sandbox — sits <em>before</em> any <code>shell_exec</code>
-runs, unchanged from the existing guardrail stack; scope rides along as advisory guidance, not a fail-closed
-egress block.</p>
+runs, unchanged from the existing guardrail stack.</p>
 
 <h2><span class="num">12 //</span> Build Summary</h2>
 
@@ -1326,7 +1335,7 @@ rather than hand-writing a typed wrapper per tool. Adding a capability becomes a
 <ul>
   <li>Run every tool in a <strong style="color:#fff">container</strong> as a non-root user, <code>--cap-drop=ALL</code>, <code>--security-opt=no-new-privileges</code>, memory/CPU limits, wordlists mounted read-only.</li>
   <li><strong style="color:#fff">Never use <code>sh -c</code>.</strong> Reject shell metacharacters, then split to an argv list and exec directly. This single decision eliminates command chaining, piping, redirection, and substitution.</li>
-  <li><strong style="color:#fff">Decide who the agent is for.</strong> If it serves multiple users, allowlist the binaries and the egress scope, fail-closed — that is the structural defence against injected callbacks/exfil. If it is a single-operator tool like this one, you can drop the allowlist, let the model pick and install any tool, and treat scope as guidance — <em>provided</em> tool execution is gated to that one trusted operator and everyone else gets chat only.</li>
+  <li><strong style="color:#fff">Decide who the agent is for.</strong> If it serves multiple users, allowlist the binaries and lock egress down, fail-closed — that is the structural defence against injected callbacks/exfil. If it is a single-operator tool like this one, you can drop the allowlist and let the model pick and install any tool — <em>provided</em> tool execution is gated to that one trusted operator and everyone else gets chat only.</li>
   <li><strong style="color:#fff">Always keep the "don't destroy the host" floor</strong> regardless: a destructive-command denylist (<code>rm -rf</code>, <code>dd</code>, <code>mkfs</code>, <code>shutdown</code>, fork bombs, <code>DROP TABLE</code>…) plus a non-root, capability-dropped sandbox.</li>
   <li><strong style="color:#fff">Treat all tool/web output as untrusted</strong> in the prompt, but never rely on that alone.</li>
 </ul>
@@ -1415,7 +1424,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
 
   <div class="gloss">
     <div class="term">Context <span class="alt">context window</span></div>
-    <div class="def">How much text a model can "see" at once — its short-term memory for the current conversation, measured in tokens. A 16K context means it can hold about 16,000 tokens of prompt + history before older text falls out of view.</div>
+    <div class="def">How much text a model can "see" at once — its short-term memory for the current conversation, measured in tokens. This project runs a 32K context — about 32,000 tokens of prompt + history before older text falls out of view.</div>
   </div>
 
   <div class="gloss">
@@ -1555,7 +1564,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
 
   <div class="gloss">
     <div class="term">Principal</div>
-    <div class="def">A "principal" is any identity the system can act as or on behalf of — a user, an admin, a service. A <strong style="color:#fff">principal hierarchy</strong> is the ranking of those identities by privilege: e.g. <em>admin</em> &gt; <em>approved user</em> &gt; <em>pending/anonymous</em>. It decides who can do what — in the planned registration phase, an admin can approve accounts or run tool-executing "Agent mode".</div>
+    <div class="def">A "principal" is any identity the system can act as or on behalf of — a user, an admin, a service. A <strong style="color:#fff">principal hierarchy</strong> is the ranking of those identities by privilege: e.g. <em>admin</em> &gt; <em>approved user</em> &gt; <em>pending/anonymous</em>. It decides who can do what — in a multi-user phase (currently parked), an admin could approve accounts or run tool-executing "Agent mode".</div>
   </div>
 
   <div class="gloss">
@@ -1570,7 +1579,7 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
 
   <div class="gloss">
     <div class="term">Blind AI execution</div>
-    <div class="def">The practice of taking an AI/LLM-generated output command, code snippet, API call, tool invocation, or decision and executing or applying it automatically, without a human or an independent control layer reviewing it first. The risk is not that AI output is inherently wrong; it's that the system acts on it before anything checks whether it's safe, correct, or in-scope. This is closely related to the OWASP LLM Top 10 category of <em>Excessive Agency</em> where an LLM-based system has more autonomy to take real-world action than its output can be trusted to justify.</div>
+    <div class="def">The practice of taking an AI/LLM-generated output command, code snippet, API call, tool invocation, or decision and executing or applying it automatically, without a human or an independent control layer reviewing it first. The risk is not that AI output is inherently wrong; it's that the system acts on it before anything checks whether it's safe or correct. This is closely related to the OWASP LLM Top 10 category of <em>Excessive Agency</em> where an LLM-based system has more autonomy to take real-world action than its output can be trusted to justify.</div>
   </div>
 
   <div class="gloss">
@@ -1580,12 +1589,37 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
 
   <div class="gloss">
     <div class="term">Validation of AI generated outputs</div>
-    <div class="def">Checking that the AI's output is correct, safe, and appropriate for the context it's about to be used in, a semantic business-logic check, not just a structural one. This asks: Is this action within policy? Is this code free of vulnerabilities? Is this recommendation factually accurate? Does this output stay within the intended scope and permissions? Validation typically requires more than a schema check, it may involve policy engines, allow-lists, deny-lists, sandboxing before execution, human-in-the-loop review for high-impact actions, or secondary model rule-based review. This is the layer that should catch a <em>prompt-injection</em> induced malicious tool call even if it's perfectly well-formed, for example, passes verification but fails validation.</div>
+    <div class="def">Checking that the AI's output is correct, safe, and appropriate for the context it's about to be used in, a semantic business-logic check, not just a structural one. This asks: Is this action within policy? Is this code free of vulnerabilities? Is this recommendation factually accurate? Does this output stay within intended permissions? Validation typically requires more than a schema check, it may involve policy engines, allow-lists, deny-lists, sandboxing before execution, human-in-the-loop review for high-impact actions, or secondary model rule-based review. This is the layer that should catch a <em>prompt-injection</em> induced malicious tool call even if it's perfectly well-formed, for example, passes verification but fails validation.</div>
   </div>
 
   <div class="gloss">
     <div class="term">Validator Function</div>
     <div class="def">The primary objective of implementing a validator function in AI application code, is to block dangerous AI generated configurations. The action performed by the validator function when it recognizes a dangerous configuration pattern, is to stop the deployment and returns and error message.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">llmctl <span class="alt">the CLI binary</span></div>
+    <div class="def">This project's private command-line agent — a single self-contained Go program that runs in a Linux terminal on the operator's own machine. You give it a goal in plain English; it reasons, proposes a shell command, runs it <em>locally</em> after you approve it, feeds the output back to the model, and loops until the task is done. It's a "Claude Code"-style loop, but driven by the private local model instead of a cloud one, with human-in-the-loop approval on every command. It reaches the model over HTTPS using an API token and saves each tool's output to disk as evidence. This is now the project's primary focus.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">hermes4:14b <span class="alt">the default model</span></div>
+    <div class="def">The specific model this assistant runs as its "brain" by default. <em>Hermes 4</em> is the model family (from NousResearch), built on Alibaba's <em>Qwen3-14B</em> — the <code>14b</code> means roughly 14&nbsp;billion parameters, i.e. how big it is. It's picked for strong <em>tool calling</em> and reasoning while still fitting on a single 16&nbsp;GB GPU, and it's steerable enough not to refuse authorized security tasks. It runs at 4-bit quantization (Q4_K_M) so it fits in VRAM.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">32K context <span class="alt">32,768 tokens</span></div>
+    <div class="def">The size of the model's working memory in this project — about 32,000 tokens of prompt + conversation + tool output it can "see" at once (see <em>Context</em> above). Doubled from the earlier 16K so longer multi-step tool runs don't scroll out of view. On a 16&nbsp;GB GPU, 32K only fits entirely on the card once the KV cache is stored at 8-bit (see <em>q8_0 KV cache</em> below); pushing higher spills onto the slower CPU.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Tokens per second <span class="alt">tok/s</span></div>
+    <div class="def">How fast the model produces text — how many tokens (word-pieces) it generates each second. It's the practical "speed" number for local inference: higher feels snappier. This build runs about <strong style="color:#fff">30 tok/s</strong> for the 14B model on the RTX 4060 Ti — comfortably faster than reading speed, so replies stream smoothly.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">q8_0 KV cache <span class="alt">KV-cache quantization</span></div>
+    <div class="def">As the model generates, it caches the attention "keys" and "values" for every token already in the context so it never recomputes them — that's the <strong style="color:#fff">KV cache</strong>, and it grows with context length and consumes VRAM. Storing it at <code>q8_0</code> (8-bit) instead of the default 16-bit roughly <em>halves</em> that memory for a negligible quality cost. It's the single setting that let this build run a 32K context 100% on the 16&nbsp;GB GPU instead of spilling to the CPU. Enabled server-wide in Ollama (<code>OLLAMA_KV_CACHE_TYPE=q8_0</code>) and requires flash attention to be on.</div>
   </div>
 
 </div>
