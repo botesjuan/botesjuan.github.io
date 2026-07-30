@@ -1483,6 +1483,21 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
   </div>
 
   <div class="gloss">
+    <div class="term">Knowledge base <span class="alt">wiki</span></div>
+    <div class="def">A private collection of reference documents an assistant can search before answering. In this project it's the operator's own personal GitHub repos — Active Directory scripts, pentest methodology notes, HTB/OffSec write-ups, Burp study notes — cloned onto the GPU node and keyword-searched to ground <code>llmctl chat</code>'s answers, cited as <code>file:line</code> so the operator can open the source for more detail. Deliberately plain keyword search rather than embeddings-based RAG: the corpus is a few hundred files, low-churn, and pentest notes tend to be keyword-dense (tool names, technique names) rather than needing fuzzy semantic matching.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">IDF weighting <span class="alt">inverse document frequency</span></div>
+    <div class="def">Scoring how important a search term is by how <em>rare</em> it is across the whole corpus — a word that shows up in nearly every file (e.g. "wordlist") counts for almost nothing, while one that shows up in only a handful (e.g. "kerberoast") counts for a lot. This project's knowledge-base search had to add this after a real task backfired: the file path in the prompt (<code>/home/kali/Downloads/wordlists/…</code>) matched the operator's own common tool-path wording across dozens of files, and plain hit-counting let that noise outrank the files actually relevant to the task.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Match-count-first ranking</div>
+    <div class="def">Ranking a search result first by how many <em>distinct</em> query concepts it covers, using the IDF weight above only as a tiebreaker. Pure weighted-sum scoring let one rare-but-incidental word ("hashing", which happened to appear in only a handful of files by corpus accident) outrank a result that actually covered the task's real intent ("kerberoast" + "domain controller" together) — sorting by breadth of coverage first, then weight, fixed it.</div>
+  </div>
+
+  <div class="gloss">
     <div class="term">Chroma <span class="alt">ChromaDB</span></div>
     <div class="def">An open-source vector database that's easy to run locally — the one used in this project to give the agent persistent memory over its notes.</div>
   </div>
@@ -1620,6 +1635,21 @@ model on stale context, and seeded memory is itself a prompt-injection vector, s
   <div class="gloss">
     <div class="term">q8_0 KV cache <span class="alt">KV-cache quantization</span></div>
     <div class="def">As the model generates, it caches the attention "keys" and "values" for every token already in the context so it never recomputes them — that's the <strong style="color:#fff">KV cache</strong>, and it grows with context length and consumes VRAM. Storing it at <code>q8_0</code> (8-bit) instead of the default 16-bit roughly <em>halves</em> that memory for a negligible quality cost. It's the single setting that let this build run a 32K context 100% on the 16&nbsp;GB GPU instead of spilling to the CPU. Enabled server-wide in Ollama (<code>OLLAMA_KV_CACHE_TYPE=q8_0</code>) and requires flash attention to be on.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Thinking mode <span class="alt">reasoning mode</span></div>
+    <div class="def">Some models — <code>hermes4:14b</code>, built on Qwen3, is one — generate an internal chain-of-thought before their real answer, and Ollama returns it in a separate <code>message.thinking</code> field, distinct from the visible <code>message.content</code>. Left enabled here, a hard cap on generated tokens (see <em>num_predict</em>) could be entirely consumed by thinking on a harder task, leaving the actual answer <em>empty</em> every time — a real incident that looked like the model refusing to format its response, until the raw API response showed why. Fixed by disabling it (<code>"think": false</code>) for the tool-execution loop, folding the reasoning back into one predictable stream.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">num_predict <span class="alt">max generation tokens</span></div>
+    <div class="def">An Ollama request setting that caps how many tokens a single model call is allowed to generate. It's a safety ceiling: without one, a model that never emits its stop sequence can run for thousands of tokens before anything cuts it off — this project hit exactly that, a single call still generating past 3,000 tokens. Set too low, though, it truncates a legitimate answer mid-thought instead, which then looks like a formatting failure rather than what it is. Tuning it turned out to be a genuine balancing act, not a one-time setting.</div>
+  </div>
+
+  <div class="gloss">
+    <div class="term">Regression test</div>
+    <div class="def">Re-running previously-working scenarios after a change, specifically to catch anything the change broke — not testing the new behaviour, testing that the <em>old</em> behaviour still holds. In this project that means firing a batch of real prompts at the live model after any change to the agent loop or system prompt, since a fix for one failure mode (e.g. capping runaway generation) can silently introduce a new one (e.g. truncating legitimate answers) that only shows up under repeated, varied testing — a single spot-check isn't enough to trust a change.</div>
   </div>
 
 </div>
